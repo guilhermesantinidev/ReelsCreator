@@ -1125,7 +1125,7 @@ function buildStaticImage() {
       const grad = ctx.createLinearGradient(0, 0, 0, 960);
       grad.addColorStop(0, 'rgba(0,0,0,0.1)');
       grad.addColorStop(0.6, 'rgba(0,0,0,0.05)');
-      grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.4)'); // Escurecimento sutil no fundo
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 540, 960);
 
@@ -1134,20 +1134,7 @@ function buildStaticImage() {
       ctx.fillStyle = grd;
       ctx.fillRect(0, 0, 540, 4);
 
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 46px Space Grotesk, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = 'rgba(0,0,0,0.8)';
-      ctx.shadowBlur = 20;
-      const mainText = state.reelText || getDefaultText();
-      wrapText(ctx, mainText, 36, 820, 468, 56);
-
-      if (state.reelSub) {
-        ctx.font = '22px Space Grotesk, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.shadowBlur = 10;
-        wrapText(ctx, state.reelSub, 36, 890, 468, 28);
-      }
+      // TEXTO REMOVIDO DAQUI PARA NÃO SOBREPOR SUA IMAGEM ORIGINAL
 
       canvas.toBlob(blob => {
         if (blob) { state.imageBlob = blob; resolve(blob); }
@@ -1173,7 +1160,6 @@ async function buildVideo() {
 
         const img = new Image();
         
-        // Correção de Race Condition: Escuta criada antes da definição do .src
         const imageLoadPromise = new Promise(r => { img.onload = r; img.onerror = r; });
         img.src = state.photo;
         
@@ -1222,7 +1208,7 @@ async function buildVideo() {
         }, 20000);
 
         let startTime = null;
-        const DURATION = 8000; // 8s
+        const DURATION = 8000; // 8 segundos de vídeo animado
 
         recorder.start();
 
@@ -1233,57 +1219,33 @@ async function buildVideo() {
 
           ctx.clearRect(0, 0, 540, 960);
 
-          // BG
+          // Fundo padrão caso falhe
           ctx.fillStyle = '#0a0a0f';
           ctx.fillRect(0, 0, 540, 960);
 
-          // Photo with Ken Burns Effect
-          const scale = 1 + t * 0.06;
+          // Efeito Ken Burns na sua imagem original
+          const scale = 1 + t * 0.05;
           const ox = (540 * scale - 540) / 2;
           const oy = (960 * scale - 960) / 2;
           ctx.drawImage(img, -ox, -oy, 540 * scale, 960 * scale);
 
-          // Gradient overlay
+          // Overlay suave
           const grad = ctx.createLinearGradient(0, 0, 0, 960);
-          grad.addColorStop(0, 'rgba(0,0,0,0.15)');
-          grad.addColorStop(0.5, 'rgba(0,0,0,0.05)');
-          grad.addColorStop(1, 'rgba(0,0,0,0.82)');
+          grad.addColorStop(0, 'rgba(0,0,0,0.1)');
+          grad.addColorStop(0.5, 'rgba(0,0,0,0.0)');
+          grad.addColorStop(1, 'rgba(0,0,0,0.4)');
           ctx.fillStyle = grad;
           ctx.fillRect(0, 0, 540, 960);
 
-          // Accent bar
-          const accentProgress = Math.min(t * 3, 1);
+          // Barra de progresso animada no topo
+          const accentProgress = Math.min(t * 1, 1);
           const grd = ctx.createLinearGradient(0, 0, 540 * accentProgress, 0);
           grd.addColorStop(0, '#a855f7');
           grd.addColorStop(1, '#ec4899');
           ctx.fillStyle = grd;
           ctx.fillRect(0, 0, 540 * accentProgress, 4);
 
-          // Main text (fade in)
-          const textAlpha = Math.min(t * 4, 1);
-          const mainText = state.reelText || getDefaultText();
-          const subText = state.reelSub;
-
-          ctx.save();
-          ctx.globalAlpha = textAlpha;
-          ctx.textAlign = 'left';
-
-          // Main headline
-          ctx.font = 'bold 46px Space Grotesk, sans-serif';
-          ctx.fillStyle = '#ffffff';
-          ctx.shadowColor = 'rgba(0,0,0,0.8)';
-          ctx.shadowBlur = 20;
-          wrapText(ctx, mainText, 36, 820, 468, 56);
-
-          // Sub
-          if (subText) {
-            ctx.font = '22px Space Grotesk, sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
-            ctx.shadowBlur = 10;
-            wrapText(ctx, subText, 36, 890, 468, 28);
-          }
-
-          ctx.restore();
+          // TEXTO REMOVIDO DE DENTRO DO ANIMATION LOOP PARA NÃO ESCREVER NA TELA
 
           if (elapsed < DURATION) {
             state.animFrame = requestAnimationFrame(drawFrame);
@@ -1302,30 +1264,9 @@ async function buildVideo() {
   });
 }
 
-// Correção completa do algoritmo de quebra de linha (Top-to-Bottom estruturado)
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = '';
-
-  for (let n = 0; n < words.length; n++) {
-    const testLine = currentLine + words[n] + ' ';
-    const metrics = ctx.measureText(testLine);
-    if (metrics.width > maxWidth && n > 0) {
-      lines.push(currentLine.trim());
-      currentLine = words[n] + ' ';
-    } else {
-      currentLine = testLine;
-    }
-  }
-  lines.push(currentLine.trim());
-
-  // Calcula a ancoragem correta a partir do ponto base y projetando para cima
-  const startY = y - (lines.length - 1) * lineHeight;
-
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], x, startY + (i * lineHeight));
-  }
+  // Mantida apenas por compatibilidade estrutural se usada externamente
+  return;
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -1369,7 +1310,7 @@ function drawStaticPreview() {
     const grad = ctx.createLinearGradient(0, 0, 0, 960);
     grad.addColorStop(0, 'rgba(0,0,0,0.1)');
     grad.addColorStop(0.6, 'rgba(0,0,0,0.05)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.4)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 540, 960);
 
@@ -1378,20 +1319,7 @@ function drawStaticPreview() {
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, 540, 4);
 
-    ctx.textAlign = 'left';
-    ctx.font = 'bold 46px Space Grotesk, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 20;
-    const mainText = state.reelText || getDefaultText();
-    wrapText(ctx, mainText, 36, 820, 468, 56);
-
-    if (state.reelSub) {
-      ctx.font = '22px Space Grotesk, sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      ctx.shadowBlur = 10;
-      wrapText(ctx, state.reelSub, 36, 890, 468, 28);
-    }
+    // TEXTO REMOVIDO DO PREVIEW DA TELA FINAL
   };
   img.src = state.photo;
 }
@@ -1420,7 +1348,7 @@ function downloadVideo() {
   a.download = `reel-${Date.now()}.${ext}`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast(state.staticOnly ? '✅ Imagem baixada!' : '✅ Vídeo baixada!');
+  showToast(state.staticOnly ? '✅ Imagem baixada!' : '✅ Vídeo baixado!');
 }
 
 async function shareNative() {
@@ -1431,7 +1359,7 @@ async function shareNative() {
   if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'Meu Reel ✨', text: state.caption + '\n\n' + state.hashtags });
-    } catch (e) { /* Cancelado */ }
+    } catch (e) { }
   } else {
     downloadVideo();
   }
@@ -1458,13 +1386,13 @@ async function compartilharInstagram() {
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     if (copied) {
-      showToast('📋 Legenda copiada! No Instagram, toque em "Legenda" e cole antes de postar.');
+      showToast('📋 Legenda copiada! No Instagram, cole antes de postar.');
     } else {
-      showToast('⚠️ Não foi possível copiar a legenda — use o botão 📋 para copiar manualmente.');
+      showToast('⚠️ Use o botão 📋 para copiar a legenda manualmente.');
     }
     try {
       await navigator.share({ files: [file], title: 'Meu Reel ✨' });
-    } catch (e) { /* Cancelado */ }
+    } catch (e) { }
     return;
   }
 
@@ -1476,9 +1404,9 @@ async function compartilharInstagram() {
   URL.revokeObjectURL(url);
 
   if (copied) {
-    showToast('⬇️ Mídia baixada e legenda copiada! Suba no Instagram e cole a legenda.');
+    showToast('⬇️ Vídeo baixado e legenda copiada! Suba no Instagram.');
   } else {
-    showToast('⬇️ Mídia baixada! Copie a legenda com 📋, suba no Instagram e cole.');
+    showToast('⬇️ Mídia baixada! Copie a legenda com 📋.');
   }
   setTimeout(() => window.open('https://www.instagram.com/', '_blank'), 1200);
 }
