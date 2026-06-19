@@ -1172,11 +1172,13 @@ async function buildVideo() {
         canvas.height = 960;
 
         const img = new Image();
+        
+        // Correção de Race Condition: Escuta criada antes da definição do .src
+        const imageLoadPromise = new Promise(r => { img.onload = r; img.onerror = r; });
         img.src = state.photo;
-        // Timeout de segurança: se onload/onerror nunca disparar (bug conhecido
-        // em WebKit antigo com imagens via data URL), não deixa travar pra sempre.
+        
         await Promise.race([
-          new Promise(r => { img.onload = r; img.onerror = r; }),
+          imageLoadPromise,
           new Promise(r => setTimeout(r, 6000))
         ]);
 
@@ -1184,11 +1186,8 @@ async function buildVideo() {
           throw new Error('VIDEO_UNSUPPORTED');
         }
 
-        // Canvas-only video stream (sem áudio — adicione a música no Instagram ao postar)
         const canvasStream = canvas.captureStream(30);
 
-        // Safari/iOS nunca suportou webm — só mp4 (e só a partir do iOS 14.3).
-        // Testamos várias opções em ordem de preferência e usamos a primeira suportada.
         const mimeCandidates = [
           'video/webm;codecs=vp9',
           'video/webm;codecs=vp8',
@@ -1199,8 +1198,6 @@ async function buildVideo() {
         const mimeType = mimeCandidates.find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m));
 
         if (!mimeType) {
-          // Nenhum formato de vídeo suportado (ex: iOS muito antigo). Cai pra imagem estática
-          // em vez de travar a tela pra sempre.
           throw new Error('VIDEO_UNSUPPORTED');
         }
 
@@ -1219,13 +1216,11 @@ async function buildVideo() {
           resolve(blob);
         };
 
-        // Salvaguarda: se nada acontecer em 20s, não deixa a tela travada pra sempre.
         const safetyTimeout = setTimeout(() => {
           try { recorder.stop(); } catch (e) {}
           reject(new Error('Tempo de renderização excedido. Tente novamente.'));
         }, 20000);
 
-        // Animation params
         let startTime = null;
         const DURATION = 8000; // 8s
 
@@ -1242,7 +1237,7 @@ async function buildVideo() {
           ctx.fillStyle = '#0a0a0f';
           ctx.fillRect(0, 0, 540, 960);
 
-          // Photo with Ken Burns
+          // Photo with Ken Burns Effect
           const scale = 1 + t * 0.06;
           const ox = (540 * scale - 540) / 2;
           const oy = (960 * scale - 960) / 2;
@@ -1307,22 +1302,30 @@ async function buildVideo() {
   });
 }
 
+// Correção completa do algoritmo de quebra de linha (Top-to-Bottom estruturado)
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   const words = text.split(' ');
-  let line = '';
-  let lineY = y;
+  const lines = [];
+  let currentLine = '';
+
   for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' ';
+    const testLine = currentLine + words[n] + ' ';
     const metrics = ctx.measureText(testLine);
     if (metrics.width > maxWidth && n > 0) {
-      ctx.fillText(line, x, lineY);
-      line = words[n] + ' ';
-      lineY -= lineHeight;
+      lines.push(currentLine.trim());
+      currentLine = words[n] + ' ';
     } else {
-      line = testLine;
+      currentLine = testLine;
     }
   }
-  ctx.fillText(line, x, lineY);
+  lines.push(currentLine.trim());
+
+  // Calcula a ancoragem correta a partir do ponto base y projetando para cima
+  const startY = y - (lines.length - 1) * lineHeight;
+
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x, startY + (i * lineHeight));
+  }
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -1347,7 +1350,6 @@ function showResult() {
   document.getElementById('captionText').textContent = state.caption;
   document.getElementById('hashtagsText').textContent = state.hashtags;
 
-  // Draw static preview on canvas
   drawStaticPreview();
 
   updateStepBar(3);
@@ -1371,7 +1373,6 @@ function drawStaticPreview() {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 540, 960);
 
-    // Accent line
     const grd = ctx.createLinearGradient(0,0,540,0);
     grd.addColorStop(0,'#a855f7'); grd.addColorStop(1,'#ec4899');
     ctx.fillStyle = grd;
@@ -1419,7 +1420,7 @@ function downloadVideo() {
   a.download = `reel-${Date.now()}.${ext}`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast(state.staticOnly ? '✅ Imagem baixada!' : '✅ Vídeo baixado!');
+  showToast(state.staticOnly ? '✅ Imagem baixada!' : '✅ Vídeo baixada!');
 }
 
 async function shareNative() {
@@ -1430,7 +1431,7 @@ async function shareNative() {
   if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'Meu Reel ✨', text: state.caption + '\n\n' + state.hashtags });
-    } catch (e) { /* user cancelled */ }
+    } catch (e) { /* Cancelado */ }
   } else {
     downloadVideo();
   }
@@ -1448,7 +1449,6 @@ async function compartilharInstagram() {
     return;
   }
 
-  // 1. Copiar legenda + hashtags para o clipboard (sempre)
   const full = `${state.caption}\n\n${state.hashtags}`;
   let copied = false;
   try { await navigator.clipboard.writeText(full); copied = true; } catch(e) {}
@@ -1456,9 +1456,6 @@ async function compartilharInstagram() {
   const { ext, type } = getMediaExtAndType(blob);
   const file = new File([blob], `reel.${ext}`, { type });
 
-  // 2. Caminho ideal: Web Share API com a mídia anexada.
-  //    No mobile, abre a share sheet nativa e o Instagram aparece como
-  //    opção já com o vídeo/imagem carregado — só falta colar a legenda.
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     if (copied) {
       showToast('📋 Legenda copiada! No Instagram, toque em "Legenda" e cole antes de postar.');
@@ -1467,14 +1464,10 @@ async function compartilharInstagram() {
     }
     try {
       await navigator.share({ files: [file], title: 'Meu Reel ✨' });
-    } catch (e) { /* usuário cancelou o share sheet */ }
+    } catch (e) { /* Cancelado */ }
     return;
   }
 
-  // 3. Fallback (ex: desktop, ou navegador sem suporte a compartilhar arquivos):
-  //    baixa o arquivo e abre o Instagram no navegador. Não existe deep link
-  //    público do Instagram que receba mídia ou preencha a legenda
-  //    automaticamente, então o usuário precisa subir o arquivo baixado.
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -1508,7 +1501,6 @@ function resetApp() {
   state.videoBlob = null;
   state.animFrame = null;
 
-  // Reset UI
   document.getElementById('result-screen').style.display = 'none';
   document.getElementById('photoPreview').style.display = 'none';
   document.getElementById('uploadZone').style.display = 'block';
@@ -1611,8 +1603,6 @@ function setupPWA() {
 // ============================
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// Garante que uma Promise nunca trava a tela pra sempre: se demorar mais que
-// `ms`, rejeita com `timeoutMsg` em vez de ficar pendente eternamente.
 function withTimeout(promise, ms, timeoutMsg) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(timeoutMsg)), ms);
@@ -1624,7 +1614,6 @@ function withTimeout(promise, ms, timeoutMsg) {
 }
 </script>
 
-<!-- PWA Service Worker Registration -->
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(console.error);
