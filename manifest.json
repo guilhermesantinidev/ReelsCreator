@@ -1,0 +1,26 @@
+{
+  "name": "ReelAI — Crie Reels com IA",
+  "short_name": "ReelAI",
+  "description": "Gere Reels incríveis para Instagram com inteligência artificial",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#a855f7",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='36' fill='%23a855f7'/><text y='130' font-size='110' text-anchor='middle' x='96'>✨</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["photo", "social", "entertainment"],
+  "shortcuts": [
+    {
+      "name": "Criar Reel",
+      "url": "./",
+      "description": "Criar um novo Reel"
+    }
+  ]
+}

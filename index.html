@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ReelAI" />
+  <meta name="description" content="Crie Reels incríveis com IA em segundos" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>ReelAI — Crie Reels com IA</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --surface2: #1c1c28;
+      --border: rgba(255,255,255,0.07);
+      --accent: #a855f7;
+      --accent2: #ec4899;
+      --accent3: #06b6d4;
+      --text: #f0f0f8;
+      --muted: #6b6b8a;
+      --success: #10b981;
+      --radius: 16px;
+      --font: 'Space Grotesk', sans-serif;
+      --mono: 'Space Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow-x: hidden;
+    }
+
+    /* ===== NOISE OVERLAY ===== */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ===== AMBIENT GLOW ===== */
+    .ambient {
+      position: fixed;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .ambient-1 { background: var(--accent); top: -200px; right: -100px; }
+    .ambient-2 { background: var(--accent2); bottom: -200px; left: -100px; }
+
+    /* ===== LAYOUT ===== */
+    #app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      padding: 20px 24px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .logo-text {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .logo-text span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .api-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .api-btn:hover { border-color: var(--accent); color: var(--text); }
+    .api-btn.has-key { color: var(--success); border-color: rgba(16,185,129,0.3); }
+
+    /* ===== MAIN CONTENT ===== */
+    main {
+      flex: 1;
+      padding: 24px;
+      max-width: 480px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ===== STEP INDICATOR ===== */
+    .steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 28px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+    .step-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .step-num.active {
+      border-color: var(--accent);
+      background: rgba(168,85,247,0.15);
+      color: var(--accent);
+    }
+    .step-num.done {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    .step-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin: 0 8px;
+    }
+    .step-line.done { background: var(--accent); }
+
+    /* ===== CARDS / PANELS ===== */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+
+    /* ===== UPLOAD ZONE ===== */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(168,85,247,0.05);
+    }
+    .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .upload-icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-text { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+    .upload-sub { font-size: 13px; color: var(--muted); }
+
+    /* ===== PHOTO PREVIEW ===== */
+    .photo-preview {
+      display: none;
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 9/16;
+      max-height: 280px;
+    }
+    .photo-preview img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .photo-change {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+
+    /* ===== STYLE GRID ===== */
+    .style-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .style-card {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .style-card:hover { border-color: rgba(168,85,247,0.4); }
+    .style-card.selected {
+      border-color: var(--accent);
+      background: rgba(168,85,247,0.1);
+    }
+    .style-emoji { font-size: 24px; margin-bottom: 6px; }
+    .style-name { font-size: 13px; font-weight: 600; }
+    .style-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ===== TEXT INPUT ===== */
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+    .field textarea { min-height: 80px; }
+    .field select option { background: var(--surface2); }
+
+    /* ===== GENERATE BUTTON ===== */
+    .btn-generate {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: var(--font);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .btn-generate:hover { transform: translateY(-1px); box-shadow: 0 12px 40px rgba(168,85,247,0.35); }
+    .btn-generate:active { transform: translateY(0); }
+    .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ===== LOADING ===== */
+    #loading-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    .loading-ring {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-right-color: var(--accent2);
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .loading-sub { font-size: 14px; color: var(--muted); text-align: center; }
+    .loading-steps {
+      margin-top: 28px;
+      width: 100%;
+      max-width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .lstep {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .lstep.active { color: var(--text); }
+    .lstep.done { color: var(--success); }
+    .lstep-icon { width: 20px; text-align: center; }
+
+    /* ===== RESULT SCREEN ===== */
+    #result-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 100;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .btn-back {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+    .result-title { font-size: 20px; font-weight: 700; }
+
+    /* ===== CANVAS REEL PREVIEW ===== */
+    .reel-container {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      aspect-ratio: 9/16;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto 20px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    }
+    #reelCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .reel-overlay-ui {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    /* ===== CAPTION AREA ===== */
+    .caption-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .caption-box-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+    .caption-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+    .hashtags {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--accent);
+      line-height: 1.8;
+    }
+    .btn-copy {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 9px;
+      padding: 7px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font);
+      margin-top: 10px;
+    }
+    .btn-copy:hover { border-color: var(--accent); }
+
+    /* ===== ACTION BUTTONS ===== */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .btn-action {
+      padding: 14px 12px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-action:hover { border-color: var(--accent); background: rgba(168,85,247,0.06); }
+    .btn-action span:first-child { font-size: 22px; }
+
+    .btn-instagram {
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .btn-instagram:hover { transform: translateY(-1px); box-shadow: 0 12px 40px rgba(253,29,29,0.3); }
+
+    /* ===== API KEY MODAL ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+    .modal-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 12px 14px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-btns { display: flex; gap: 10px; }
+    .btn-modal-cancel {
+      flex: 1;
+      padding: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      font-family: var(--font);
+      cursor: pointer;
+    }
+    .btn-modal-save {
+      flex: 2;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      color: white;
+      border-radius: 10px;
+      font-family: var(--font);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 40px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 999;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ===== AUDIO VISUALIZER ===== */
+    .visualizer {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 20px;
+    }
+    .vis-bar {
+      width: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      animation: visAnim 0.8s ease-in-out infinite alternate;
+    }
+    .vis-bar:nth-child(2) { animation-delay: 0.1s; background: var(--accent2); }
+    .vis-bar:nth-child(3) { animation-delay: 0.2s; }
+    .vis-bar:nth-child(4) { animation-delay: 0.05s; background: var(--accent2); }
+    .vis-bar:nth-child(5) { animation-delay: 0.15s; }
+    @keyframes visAnim {
+      from { height: 4px; }
+      to { height: 18px; }
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.4s ease forwards; }
+
+    /* ===== INSTALL BANNER ===== */
+    #install-banner {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px;
+      z-index: 50;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    #install-banner p { font-size: 13px; color: var(--muted); }
+    #install-banner strong { color: var(--text); }
+    .btn-install {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <div class="modal-title">🔑 Groq API Key</div>
+    <div class="modal-sub">Cole sua chave da Groq para gerar legendas com IA. Grátis em <strong>console.groq.com</strong></div>
+    <input type="password" class="modal-input" id="apiKeyInput" placeholder="gsk_..." />
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeApiModal()">Cancelar</button>
+      <button class="btn-modal-save" onclick="saveApiKey()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <p><strong>Instalar ReelAI</strong><br>Acesso rápido na tela inicial</p>
+  <button class="btn-install" id="installBtn">Instalar</button>
+</div>
+
+<div id="app">
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">✨</div>
+      <div class="logo-text">Reel<span>AI</span></div>
+    </div>
+    <button class="api-btn" id="apiKeyBtn" onclick="openApiModal()">
+      <span id="apiKeyIcon">🔓</span>
+      <span id="apiKeyLabel">API Key</span>
+    </button>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+    <!-- STEP INDICATOR -->
+    <div class="steps" id="stepsBar">
+      <div class="step-item">
+        <div class="step-num active" id="s1">1</div>
+        <div class="step-line" id="l1"></div>
+      </div>
+      <div class="step-item">
+        <div class="step-num" id="s2">2</div>
+        <div class="step-line" id="l2"></div>
+      </div>
+      <div class="step-item" style="flex:0">
+        <div class="step-num" id="s3">3</div>
+      </div>
+    </div>
+
+    <!-- STEP 1: FOTO -->
+    <div id="step1" class="fade-up">
+      <div class="panel">
+        <div class="panel-title">📸 Sua Foto</div>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" accept="image/*" id="photoInput" onchange="handlePhoto(event)" />
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-text">Arraste ou toque para escolher</div>
+          <div class="upload-sub">JPG, PNG, WEBP — até 10 MB</div>
+        </div>
+        <div class="photo-preview" id="photoPreview">
+          <img id="photoImg" src="" alt="Sua foto" />
+          <button class="photo-change" onclick="changePhoto()">✏️ Trocar</button>
+        </div>
+      </div>
+
+      <!-- ESTILO -->
+      <div class="panel">
+        <div class="panel-title">🎨 Estilo do Reel</div>
+        <div class="style-grid">
+          <div class="style-card" onclick="selectStyle(this,'lifestyle')" data-style="lifestyle">
+            <div class="style-emoji">🌍</div>
+            <div class="style-name">Lifestyle</div>
+            <div class="style-desc">Viagem & dia a dia</div>
+          </div>
+          <div class="style-card" onclick="selectStyle(this,'fashion')" data-style="fashion">
+            <div class="style-emoji">👗</div>
+            <div class="style-name">Moda</div>
+            <div class="style-desc">Look & beleza</div>
+          </div>
+          <div class="style-card" onclick="selectStyle(this,'fitness')" data-style="fitness">
+            <div class="style-emoji">💪</div>
+            <div class="style-name">Fitness</div>
+            <div class="style-desc">Saúde & treino</div>
+          </div>
+          <div class="style-card" onclick="selectStyle(this,'food')" data-style="food">
+            <div class="style-emoji">🍽️</div>
+            <div class="style-name">Gastronomia</div>
+            <div class="style-desc">Food & receitas</div>
+          </div>
+          <div class="style-card" onclick="selectStyle(this,'business')" data-style="business">
+            <div class="style-emoji">💼</div>
+            <div class="style-name">Business</div>
+            <div class="style-desc">Empreendedorismo</div>
+          </div>
+          <div class="style-card" onclick="selectStyle(this,'motivation')" data-style="motivation">
+            <div class="style-emoji">🔥</div>
+            <div class="style-name">Motivação</div>
+            <div class="style-desc">Inspire & engaje</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">✍️ Contexto (opcional)</div>
+        <div class="field">
+          <textarea id="contextInput" placeholder="Ex: viagem ao Rio, outfit do dia, receita de bolo..."></textarea>
+        </div>
+      </div>
+
+      <button class="btn-generate" onclick="goToStep2()">
+        Continuar →
+      </button>
+    </div>
+
+    <!-- STEP 2: TEXTO DO REEL -->
+    <div id="step2" style="display:none">
+      <div class="panel">
+        <div class="panel-title">💬 Legenda IA</div>
+        <div class="field">
+          <label>Tom da legenda IA</label>
+          <select id="toneSelect">
+            <option value="inspirador">✨ Inspirador</option>
+            <option value="divertido">😄 Divertido & leve</option>
+            <option value="misterioso">🌙 Misterioso</option>
+            <option value="motivacional">🔥 Motivacional</option>
+            <option value="romantico">💕 Romântico</option>
+            <option value="profissional">💼 Profissional</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-generate" id="btnGenerate" onclick="generateReel()">
+        ✨ Gerar Reel com IA
+      </button>
+    </div>
+  </main>
+</div>
+
+<!-- LOADING SCREEN -->
+<div id="loading-screen">
+  <div class="loading-ring"></div>
+  <div class="loading-title">Criando seu Reel</div>
+  <div class="loading-sub" id="loadingSub">Isso leva só alguns segundos...</div>
+  <div class="loading-steps">
+    <div class="lstep active" id="ls1"><span class="lstep-icon">🤖</span> Gerando legenda com IA</div>
+    <div class="lstep" id="ls2"><span class="lstep-icon">🎬</span> Montando o vídeo</div>
+    <div class="lstep" id="ls3"><span class="lstep-icon">🖌️</span> Aplicando efeitos visuais</div>
+    <div class="lstep" id="ls4"><span class="lstep-icon">✅</span> Finalizando</div>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="result-screen">
+  <div class="result-header">
+    <button class="btn-back" onclick="goBack()">← Voltar</button>
+    <div class="result-title">Seu Reel 🎬</div>
+  </div>
+
+  <div class="reel-container">
+    <canvas id="reelCanvas" width="540" height="960"></canvas>
+  </div>
+
+  <div class="caption-box">
+    <div class="caption-box-title">📝 Legenda IA</div>
+    <div class="caption-text" id="captionText"></div>
+    <div class="hashtags" id="hashtagsText"></div>
+    <button class="btn-copy" onclick="copyCap()">📋 Copiar legenda + hashtags</button>
+  </div>
+
+  <div class="action-grid">
+    <button class="btn-action" onclick="downloadVideo()">
+      <span>⬇️</span>
+      <span>Baixar vídeo</span>
+    </button>
+  </div>
+
+  <button class="btn-instagram" onclick="compartilharInstagram()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+    📲 Compartilhar no Instagram Reels
+  </button>
+  <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:10px;">✅ Legenda copiada automaticamente — só colar e postar!</p>
+
+  <button class="btn-novo-reel" onclick="resetApp()" style="width:100%;margin-top:12px;padding:14px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+    ↻ Criar Novo Reel
+  </button>
+</div>
+
+<script>
+// ============================
+// STATE
+// ============================
+let state = {
+  photo: null,
+  photoFile: null,
+  style: null,
+  caption: '',
+  hashtags: '',
+  reelText: '',
+  reelSub: '',
+  currentStep: 1,
+  groqKey: localStorage.getItem('groq_key') || '',
+  videoBlob: null,
+  animFrame: null,
+};
+
+// ============================
+// INIT
+// ============================
+window.addEventListener('load', () => {
+  updateApiBtn();
+  setupDragDrop();
+  setupPWA();
+});
+
+function updateApiBtn() {
+  const btn = document.getElementById('apiKeyBtn');
+  const icon = document.getElementById('apiKeyIcon');
+  const label = document.getElementById('apiKeyLabel');
+  if (state.groqKey) {
+    btn.classList.add('has-key');
+    icon.textContent = '🔑';
+    label.textContent = 'API ativa';
+  } else {
+    btn.classList.remove('has-key');
+    icon.textContent = '🔓';
+    label.textContent = 'API Key';
+  }
+}
+
+function setupDragDrop() {
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) processPhoto(file);
+  });
+}
+
+// ============================
+// PHOTO
+// ============================
+function handlePhoto(event) {
+  const file = event.target.files[0];
+  if (file) processPhoto(file);
+}
+
+function processPhoto(file) {
+  state.photoFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    state.photo = e.target.result;
+    document.getElementById('photoImg').src = state.photo;
+    document.getElementById('uploadZone').style.display = 'none';
+    document.getElementById('photoPreview').style.display = 'block';
+    updateStep(1);
+  };
+  reader.readAsDataURL(file);
+}
+
+function changePhoto() {
+  document.getElementById('photoInput').click();
+}
+
+// ============================
+// STYLE
+// ============================
+function selectStyle(el, style) {
+  document.querySelectorAll('.style-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.style = style;
+}
+
+// ============================
+// NAVIGATION
+// ============================
+function goToStep2() {
+  if (!state.photo) { showToast('📸 Adicione uma foto primeiro!'); return; }
+  if (!state.style) { showToast('🎨 Escolha um estilo!'); return; }
+  showStep(2);
+  updateStepBar(2);
+}
+
+function showStep(n) {
+  [1,2].forEach(i => {
+    document.getElementById(`step${i}`).style.display = i === n ? 'block' : 'none';
+  });
+  state.currentStep = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateStepBar(active) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById(`s${i}`);
+    el.classList.remove('active','done');
+    if (i < active) el.classList.add('done'), el.textContent = '✓';
+    else if (i === active) el.classList.add('active');
+    else el.textContent = i;
+  });
+  [1,2].forEach(i => {
+    const l = document.getElementById(`l${i}`);
+    if (l) l.classList.toggle('done', i < active);
+  });
+}
+
+function updateStep(n) { /* placeholder for visual feedback */ }
+
+// ============================
+// GENERATE REEL
+// ============================
+async function generateReel() {
+  showLoading(true);
+  setLoadingStep(1);
+
+  try {
+    // 1. Generate caption (with Groq if key available, else fallback)
+    let caption;
+    if (state.groqKey) {
+      caption = await generateCaptionGroq();
+    } else {
+      caption = generateFallbackCaption();
+    }
+    state.caption = caption.text;
+    state.hashtags = caption.hashtags;
+    state.reelText = getDefaultText();
+    state.reelSub = '';
+
+    setLoadingStep(2);
+    await sleep(600);
+
+    // 2. Render canvas frames
+    setLoadingStep(3);
+    await sleep(400);
+
+    // 3. Build video with MediaRecorder
+    const blob = await buildVideo();
+    state.videoBlob = blob;
+
+    setLoadingStep(4);
+    await sleep(400);
+
+    showLoading(false);
+    showResult();
+  } catch (err) {
+    showLoading(false);
+    showToast('❌ Erro: ' + err.message);
+    console.error(err);
+  }
+}
+
+// ============================
+// GROQ API
+// ============================
+async function generateCaptionGroq() {
+  const styleMap = {
+    lifestyle: 'lifestyle e viagens', fashion: 'moda e beleza', fitness: 'fitness e saúde',
+    food: 'gastronomia e receitas', business: 'empreendedorismo e negócios', motivation: 'motivação e superação'
+  };
+  const tone = document.getElementById('toneSelect').value;
+  const context = document.getElementById('contextInput').value;
+  const styleName = styleMap[state.style] || state.style;
+
+  const prompt = `Você é um especialista em marketing digital para Instagram. Crie uma legenda INCRÍVEL para um Reel de ${styleName}.
+
+Contexto adicional: ${context || 'nenhum'}
+Tom desejado: ${tone}
+
+Retorne EXATAMENTE neste formato JSON (sem markdown, sem explicações):
+{"caption": "legenda aqui com emojis, máximo 150 caracteres", "hashtags": "#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5 #hashtag6 #hashtag7 #hashtag8 #hashtag9 #hashtag10"}
+
+A legenda deve ser em português brasileiro, envolvente, com emojis estratégicos e chamada para ação.`;
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.groqKey}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.85,
+      max_tokens: 300,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Groq API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  let text = data.choices[0].message.content.trim();
+  // strip potential markdown
+  text = text.replace(/```json|```/g, '').trim();
+  const parsed = JSON.parse(text);
+  return { text: parsed.caption, hashtags: parsed.hashtags };
+}
+
+function getDefaultText() {
+  const defaults = {
+    lifestyle: 'Vivendo cada momento ✨',
+    fashion: 'O estilo é uma atitude 💫',
+    fitness: 'Seu corpo, sua conquista 💪',
+    food: 'Sabor que abraça a alma 🍽️',
+    business: 'Sonhos viram resultados 🚀',
+    motivation: 'Você é mais forte do que pensa 🔥',
+  };
+  return defaults[state.style] || 'Compartilhando momentos ✨';
+}
+
+function generateFallbackCaption() {
+  const context = document.getElementById('contextInput').value;
+  const tone = document.getElementById('toneSelect').value;
+  const captions = {
+    lifestyle: {
+      inspirador: { text: `Cada momento é único e irrepetível ✨ ${context ? '— ' + context : 'Viva intensamente!'}`, hashtags: '#lifestyle #vidaboa #momentos #gratidao #instadaily #vibes #felicidade #vida #instabr #vivabem' },
+      divertido:  { text: `Vida é curta demais pra ser chata 😂🎉 ${context ? '— ' + context : ''}`, hashtags: '#lifestyle #diversao #fun #instabr #alegria #vidaboa #boadiversao #humor #vibes #happy' },
+      misterioso: { text: `Alguns lugares guardam segredos 🌙🗝️ ${context || ''}`, hashtags: '#lifestyle #mistério #dark #aesthetic #vibes #instabr #moodygram #nightvibes #sombra #soul' },
+      motivacional:{ text: `A vida premia quem não para 🔥 ${context || 'Siga em frente!'}`, hashtags: '#motivacao #lifestyle #foco #disciplina #sucesso #mentalidade #conquista #instabr #determinacao #meta' },
+      romantico:  { text: `Nos pequenos detalhes mora a beleza 💕 ${context || ''}`, hashtags: '#lifestyle #amor #romantico #belleza #vida #felicidade #instabr #feeling #moments #loveit' },
+      profissional:{ text: `Resultados não acontecem por acaso. 💼 ${context || ''}`, hashtags: '#lifestyle #profissional #resultado #trabalho #carreira #mentalidade #sucesso #instabr #focus #business' },
+    },
+    fashion: {
+      inspirador: { text: `Moda é expressão, não obrigação ✨👗 ${context || ''}`, hashtags: '#fashion #moda #style #ootd #instafashion #lookdodia #modabr #tendencia #look #fashionista' },
+      divertido:  { text: `Roupa boa levanta qualquer humor 😄👗 ${context || ''}`, hashtags: '#fashion #ootd #lookdodia #moda #style #instafashion #outfit #funny #modabr #vibes' },
+      misterioso: { text: `O mistério começa no look 🌙✨ ${context || ''}`, hashtags: '#fashion #darkstyle #aesthetic #moda #style #ootd #modabr #mystery #instafashion #black' },
+      motivacional:{ text: `Vista-se para o sucesso que quer conquistar 🔥 ${context || ''}`, hashtags: '#fashion #motivacao #style #ootd #moda #look #instafashion #sucesso #conquista #modabr' },
+      romantico:  { text: `Beleza que encanta por dentro e por fora 💕 ${context || ''}`, hashtags: '#fashion #amor #style #ootd #romantico #moda #belleza #modabr #look #instafashion' },
+      profissional:{ text: `A primeira impressão começa com o look. 💼 ${context || ''}`, hashtags: '#fashion #profissional #style #look #moda #ootd #instafashion #business #modabr #elegante' },
+    },
+    fitness: {
+      inspirador: { text: `Cada treino é um passo mais perto do seu melhor 💪✨ ${context || ''}`, hashtags: '#fitness #treino #saude #gym #workout #corpo #foco #instafitness #fitbr #motivacao' },
+      divertido:  { text: `Academia: onde a dor vira conquista 😅💪 ${context || ''}`, hashtags: '#fitness #academia #treino #gym #funny #workout #fitbr #humor #corpo #instafitness' },
+      misterioso: { text: `O que acontece no treino, fica no treino 🌙💪 ${context || ''}`, hashtags: '#fitness #treino #gym #aesthetic #workout #corpo #fitbr #dark #instafitness #mystery' },
+      motivacional:{ text: `Desculpa não queima caloria. Bora treinar! 🔥 ${context || ''}`, hashtags: '#fitness #motivacao #treino #gym #workout #foco #disciplina #fitbr #conquista #meta' },
+      romantico:  { text: `Cuidar do corpo é um ato de amor próprio 💕 ${context || ''}`, hashtags: '#fitness #saude #amor #treino #bemestar #corpo #autocuidado #fitbr #instafitness #loveyourself' },
+      profissional:{ text: `Disciplina é o que separa objetivo de resultado. 💼 ${context || ''}`, hashtags: '#fitness #disciplina #treino #resultado #gym #workout #foco #fitbr #meta #profissional' },
+    },
+    food: {
+      inspirador: { text: `Comida boa é afeto em forma de sabor 🍽️✨ ${context || ''}`, hashtags: '#food #gastronomia #receita #comida #foodie #instafood #sabor #foodporn #culinaria #yummy' },
+      divertido:  { text: `A dieta começa amanhã... ou na semana que vem 😂🍕 ${context || ''}`, hashtags: '#food #dieta #comida #foodie #instafood #yummy #funny #gastronomia #foodporn #gostoso' },
+      misterioso: { text: `Sabores que contam histórias 🌙🍷 ${context || ''}`, hashtags: '#food #gastronomia #mysteryfood #aesthetic #instafood #sabor #culinaria #foodie #vibes #gourmet' },
+      motivacional:{ text: `Cozinhar é criar. E criar é poderoso 🔥🍳 ${context || ''}`, hashtags: '#food #culinaria #receita #instafood #gastronomia #comida #foodie #criatividade #chef #motivacao' },
+      romantico:  { text: `O amor entra pela cozinha... e pelo estômago 💕🍽️ ${context || ''}`, hashtags: '#food #amor #gastronomia #instafood #romantico #sabor #comida #yummy #foodie #foodlove' },
+      profissional:{ text: `Gastronomia de qualidade começa nos detalhes. 💼 ${context || ''}`, hashtags: '#food #gastronomia #chef #instafood #culinaria #gourmet #profissional #receita #sabor #foodie' },
+    },
+    business: {
+      inspirador: { text: `Negócios que transformam vidas começam com uma ideia ✨💼 ${context || ''}`, hashtags: '#business #empreendedorismo #startup #sucesso #negocio #empresario #instabr #mentoria #resultado #carreira' },
+      divertido:  { text: `Reunião às 7h, mas o café resolve tudo 😄☕ ${context || ''}`, hashtags: '#business #trabalho #humor #empreendedorismo #cafe #instabr #escritorio #meme #startup #empresario' },
+      misterioso: { text: `Os grandes movimentos acontecem nos bastidores 🌙💼 ${context || ''}`, hashtags: '#business #estrategia #bastidores #empreendedorismo #negocio #instabr #mindset #dark #sucesso #decisao' },
+      motivacional:{ text: `Construa o que os outros dizem ser impossível 🔥💼 ${context || ''}`, hashtags: '#business #motivacao #empreendedorismo #sucesso #meta #foco #disciplina #resultado #instabr #mindset' },
+      romantico:  { text: `Apaixone-se pelo processo, não só pelo resultado 💕 ${context || ''}`, hashtags: '#business #paixao #empreendedorismo #processo #negocio #amor #instabr #sucesso #carreira #mindset' },
+      profissional:{ text: `Resultados consistentes exigem estratégias consistentes. 💼 ${context || ''}`, hashtags: '#business #profissional #estrategia #resultado #empreendedorismo #negocio #carreira #instabr #gestao #sucesso' },
+    },
+    motivation: {
+      inspirador: { text: `Você foi feito para mais do que imagina ✨🔥 ${context || ''}`, hashtags: '#motivacao #inspiracao #sucesso #mentalidade #foco #conquista #instabr #crescimento #meta #determinacao' },
+      divertido:  { text: `Segunda-feira: a grande vilã que é só dia como outro qualquer 😂⚡ ${context || ''}`, hashtags: '#motivacao #humor #instabr #segunda #trabalho #vida #funny #meme #vibes #brinde' },
+      misterioso: { text: `O que muda você não avisa com antecedência 🌙⚡ ${context || ''}`, hashtags: '#motivacao #mudanca #dark #aesthetic #instabr #vibes #mentalidade #transformacao #vida #mystery' },
+      motivacional:{ text: `Para quem tem propósito, não existe impossível 🔥 ${context || ''}`, hashtags: '#motivacao #proposito #foco #disciplina #conquista #sucesso #meta #instabr #mentalidade #determinacao' },
+      romantico:  { text: `Amor-próprio é a motivação mais poderosa 💕✨ ${context || ''}`, hashtags: '#motivacao #amorporprio #autocuidado #instabr #amor #bemestar #crescimento #inspiracao #vida #soul' },
+      profissional:{ text: `Alta performance nasce de hábitos consistentes. 💼 ${context || ''}`, hashtags: '#motivacao #performance #habitos #profissional #sucesso #disciplina #resultado #instabr #foco #mentalidade' },
+    },
+  };
+  const styleData = captions[state.style] || captions.lifestyle;
+  const toneKey = tone in styleData ? tone : 'inspirador';
+  return styleData[toneKey];
+}
+
+// ============================
+// VIDEO BUILDER (Canvas + MediaRecorder)
+// ============================
+async function buildVideo() {
+  return new Promise(async (resolve, reject) => {
+    const canvas = document.getElementById('reelCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 540;
+    canvas.height = 960;
+
+    const img = new Image();
+    img.src = state.photo;
+    await new Promise(r => { img.onload = r; img.onerror = r; });
+
+    // Canvas-only video stream (sem áudio — adicione a música no Instagram ao postar)
+    const canvasStream = canvas.captureStream(30);
+
+    const chunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm';
+    const recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 3_000_000 });
+
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      resolve(blob);
+    };
+
+    // Animation params
+    let startTime = null;
+    const DURATION = 8000; // 8s
+
+    recorder.start();
+
+    function drawFrame(ts) {
+      if (!startTime) startTime = ts;
+      const elapsed = ts - startTime;
+      const t = Math.min(elapsed / DURATION, 1);
+
+      ctx.clearRect(0, 0, 540, 960);
+
+      // BG
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, 540, 960);
+
+      // Photo with Ken Burns
+      const scale = 1 + t * 0.06;
+      const ox = (540 * scale - 540) / 2;
+      const oy = (960 * scale - 960) / 2;
+      ctx.drawImage(img, -ox, -oy, 540 * scale, 960 * scale);
+
+      // Gradient overlay
+      const grad = ctx.createLinearGradient(0, 0, 0, 960);
+      grad.addColorStop(0, 'rgba(0,0,0,0.15)');
+      grad.addColorStop(0.5, 'rgba(0,0,0,0.05)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.82)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 540, 960);
+
+      // Accent bar
+      const accentProgress = Math.min(t * 3, 1);
+      const grd = ctx.createLinearGradient(0, 0, 540 * accentProgress, 0);
+      grd.addColorStop(0, '#a855f7');
+      grd.addColorStop(1, '#ec4899');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, 540 * accentProgress, 4);
+
+      // Main text (fade in)
+      const textAlpha = Math.min(t * 4, 1);
+      const mainText = state.reelText || getDefaultText();
+      const subText = state.reelSub;
+
+      ctx.save();
+      ctx.globalAlpha = textAlpha;
+      ctx.textAlign = 'left';
+
+      // Main headline
+      ctx.font = 'bold 46px Space Grotesk, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 20;
+      wrapText(ctx, mainText, 36, 820, 468, 56);
+
+      // Sub
+      if (subText) {
+        ctx.font = '22px Space Grotesk, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.shadowBlur = 10;
+        wrapText(ctx, subText, 36, 890, 468, 28);
+      }
+
+      ctx.restore();
+
+      if (elapsed < DURATION) {
+        state.animFrame = requestAnimationFrame(drawFrame);
+      } else {
+        recorder.stop();
+        cancelAnimationFrame(state.animFrame);
+      }
+    }
+
+    requestAnimationFrame(drawFrame);
+  });
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let lineY = y;
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && n > 0) {
+      ctx.fillText(line, x, lineY);
+      line = words[n] + ' ';
+      lineY -= lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, lineY);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ============================
+// RESULT
+// ============================
+function showResult() {
+  document.getElementById('result-screen').style.display = 'block';
+  document.getElementById('captionText').textContent = state.caption;
+  document.getElementById('hashtagsText').textContent = state.hashtags;
+
+  // Draw static preview on canvas
+  drawStaticPreview();
+
+  updateStepBar(3);
+  document.getElementById('s3').classList.remove('active');
+  document.getElementById('s3').classList.add('done');
+  document.getElementById('s3').textContent = '✓';
+}
+
+function drawStaticPreview() {
+  const canvas = document.getElementById('reelCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 540; canvas.height = 960;
+
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, 540, 960);
+    const grad = ctx.createLinearGradient(0, 0, 0, 960);
+    grad.addColorStop(0, 'rgba(0,0,0,0.1)');
+    grad.addColorStop(0.6, 'rgba(0,0,0,0.05)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 540, 960);
+
+    // Accent line
+    const grd = ctx.createLinearGradient(0,0,540,0);
+    grd.addColorStop(0,'#a855f7'); grd.addColorStop(1,'#ec4899');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, 540, 4);
+
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 46px Space Grotesk, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 20;
+    const mainText = state.reelText || getDefaultText();
+    wrapText(ctx, mainText, 36, 820, 468, 56);
+
+    if (state.reelSub) {
+      ctx.font = '22px Space Grotesk, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.shadowBlur = 10;
+      wrapText(ctx, state.reelSub, 36, 890, 468, 28);
+    }
+  };
+  img.src = state.photo;
+}
+
+// ============================
+// DOWNLOAD & SHARE
+// ============================
+function downloadVideo() {
+  if (!state.videoBlob) { showToast('⏳ Aguarde o vídeo finalizar'); return; }
+  const url = URL.createObjectURL(state.videoBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reel-${Date.now()}.webm`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Vídeo baixado!');
+}
+
+async function shareNative() {
+  if (!state.videoBlob) { showToast('⏳ Aguarde o vídeo finalizar'); return; }
+  const file = new File([state.videoBlob], 'reel.webm', { type: 'video/webm' });
+  if (navigator.share && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Meu Reel ✨', text: state.caption + '\n\n' + state.hashtags });
+    } catch (e) { /* user cancelled */ }
+  } else {
+    downloadVideo();
+  }
+}
+
+function copyCap() {
+  const full = `${state.caption}\n\n${state.hashtags}`;
+  navigator.clipboard.writeText(full).then(() => showToast('📋 Legenda copiada!'));
+}
+
+async function compartilharInstagram() {
+  if (!state.videoBlob) {
+    showToast('⏳ Aguarde o vídeo finalizar');
+    return;
+  }
+
+  // 1. Copiar legenda + hashtags para o clipboard (sempre)
+  const full = `${state.caption}\n\n${state.hashtags}`;
+  let copied = false;
+  try { await navigator.clipboard.writeText(full); copied = true; } catch(e) {}
+
+  const file = new File([state.videoBlob], 'reel.mp4', { type: 'video/mp4' });
+
+  // 2. Caminho ideal: Web Share API com o vídeo anexado.
+  //    No mobile, abre a share sheet nativa e o Instagram aparece como
+  //    opção já com o vídeo carregado — só falta colar a legenda.
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (copied) {
+      showToast('📋 Legenda copiada! No Instagram, toque em "Legenda" e cole antes de postar.');
+    } else {
+      showToast('⚠️ Não foi possível copiar a legenda — use o botão 📋 para copiar manualmente.');
+    }
+    try {
+      await navigator.share({ files: [file], title: 'Meu Reel ✨' });
+    } catch (e) { /* usuário cancelou o share sheet */ }
+    return;
+  }
+
+  // 3. Fallback (ex: desktop, ou navegador sem suporte a compartilhar arquivos):
+  //    baixa o vídeo e abre o Instagram no navegador. Não existe deep link
+  //    público do Instagram que receba o vídeo ou preencha a legenda
+  //    automaticamente, então o usuário precisa subir o arquivo baixado.
+  const url = URL.createObjectURL(state.videoBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'reel.mp4';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  if (copied) {
+    showToast('⬇️ Vídeo baixado e legenda copiada! Suba o vídeo no Instagram e cole a legenda.');
+  } else {
+    showToast('⬇️ Vídeo baixado! Copie a legenda com 📋, suba o vídeo no Instagram e cole.');
+  }
+  setTimeout(() => window.open('https://www.instagram.com/', '_blank'), 1200);
+}
+
+function goBack() {
+  document.getElementById('result-screen').style.display = 'none';
+  if (state.animFrame) cancelAnimationFrame(state.animFrame);
+}
+
+function resetApp() {
+  if (state.animFrame) cancelAnimationFrame(state.animFrame);
+  state.photo = null;
+  state.photoFile = null;
+  state.style = null;
+  state.caption = '';
+  state.hashtags = '';
+  state.reelText = '';
+  state.reelSub = '';
+  state.currentStep = 1;
+  state.videoBlob = null;
+  state.animFrame = null;
+
+  // Reset UI
+  document.getElementById('result-screen').style.display = 'none';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('uploadZone').style.display = 'block';
+  document.getElementById('photoInput').value = '';
+  document.getElementById('photoImg').src = '';
+  document.getElementById('contextInput').value = '';
+
+  document.querySelectorAll('.style-card').forEach(c => c.classList.remove('selected'));
+  showStep(1);
+  updateStepBar(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================
+// LOADING
+// ============================
+function showLoading(show) {
+  document.getElementById('loading-screen').style.display = show ? 'flex' : 'none';
+  if (show) {
+    document.getElementById('loadingSub').textContent = state.groqKey
+      ? 'Gerando legenda com IA...'
+      : 'Usando legenda padrão (adicione uma API Key Groq para legendas com IA)';
+  }
+}
+
+function setLoadingStep(n) {
+  [1,2,3,4].forEach(i => {
+    const el = document.getElementById(`ls${i}`);
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  });
+}
+
+// ============================
+// API KEY MODAL
+// ============================
+function openApiModal() {
+  document.getElementById('apiModal').style.display = 'flex';
+  document.getElementById('apiKeyInput').value = state.groqKey;
+}
+
+function closeApiModal() {
+  document.getElementById('apiModal').style.display = 'none';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('gsk_') && key.length > 0) {
+    showToast('⚠️ A chave deve começar com gsk_');
+    return;
+  }
+  state.groqKey = key;
+  localStorage.setItem('groq_key', key);
+  updateApiBtn();
+  closeApiModal();
+  showToast(key ? '✅ API Key salva!' : '🔓 API Key removida');
+}
+
+document.getElementById('apiModal').addEventListener('click', function(e) {
+  if (e.target === this) closeApiModal();
+});
+
+// ============================
+// TOAST
+// ============================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============================
+// PWA
+// ============================
+let deferredPrompt;
+function setupPWA() {
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('install-banner').style.display = 'flex';
+  });
+  document.getElementById('installBtn').addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('install-banner').style.display = 'none';
+    }
+  });
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('install-banner').style.display = 'none';
+  });
+}
+
+// ============================
+// UTILS
+// ============================
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+
+<!-- PWA Service Worker Registration -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(console.error);
+}
+</script>
+
+</body>
+</html>
