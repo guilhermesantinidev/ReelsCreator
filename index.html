@@ -284,6 +284,36 @@
     .field textarea { min-height: 80px; }
     .field select option { background: var(--surface2); }
 
+    /* ===== DURATION GRID ===== */
+    .duration-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .duration-card {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .duration-card:hover { border-color: rgba(168,85,247,0.4); }
+    .duration-card.selected {
+      border-color: var(--accent);
+      background: rgba(168,85,247,0.1);
+    }
+    .duration-seconds {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      font-family: var(--mono);
+      margin-bottom: 4px;
+    }
+    .duration-card.selected .duration-seconds { color: var(--accent); }
+    .duration-desc { font-size: 11px; color: var(--muted); }
+
     /* ===== GENERATE BUTTON ===== */
     .btn-generate {
       width: 100%;
@@ -758,6 +788,25 @@
           </select>
         </div>
       </div>
+
+      <div class="panel">
+        <div class="panel-title">⏱️ Duração do Reel</div>
+        <div class="duration-grid">
+          <div class="duration-card selected" onclick="selectDuration(this, 15)" data-duration="15">
+            <div class="duration-seconds">15s</div>
+            <div class="duration-desc">Shorts rápido</div>
+          </div>
+          <div class="duration-card" onclick="selectDuration(this, 30)" data-duration="30">
+            <div class="duration-seconds">30s</div>
+            <div class="duration-desc">Padrão Reels</div>
+          </div>
+          <div class="duration-card" onclick="selectDuration(this, 60)" data-duration="60">
+            <div class="duration-seconds">60s</div>
+            <div class="duration-desc">Conteúdo rico</div>
+          </div>
+        </div>
+      </div>
+
       <button class="btn-generate" id="btnGenerate" onclick="generateReel()">
         ✨ Gerar Reel com IA
       </button>
@@ -830,6 +879,7 @@ let state = {
   groqKey: localStorage.getItem('groq_key') || '',
   videoBlob: null,
   animFrame: null,
+  duration: 15, // seconds
 };
 
 // ============================
@@ -903,6 +953,15 @@ function selectStyle(el, style) {
 }
 
 // ============================
+// DURATION
+// ============================
+function selectDuration(el, seconds) {
+  document.querySelectorAll('.duration-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.duration = seconds;
+}
+
+// ============================
 // NAVIGATION
 // ============================
 function goToStep2() {
@@ -965,7 +1024,7 @@ async function generateReel() {
 
     // 3. Build video with MediaRecorder (com timeout de segurança — nunca trava a tela)
     try {
-      const blob = await withTimeout(buildVideo(), 12000, 'VIDEO_TIMEOUT');
+      const blob = await withTimeout(buildVideo(), state.duration * 1000 + 15000, 'VIDEO_TIMEOUT');
       state.videoBlob = blob;
       state.staticOnly = false;
     } catch (videoErr) {
@@ -1205,10 +1264,10 @@ async function buildVideo() {
         const safetyTimeout = setTimeout(() => {
           try { recorder.stop(); } catch (e) {}
           reject(new Error('Tempo de renderização excedido. Tente novamente.'));
-        }, 20000);
+        }, state.duration * 1000 + 12000);
 
         let startTime = null;
-        const DURATION = 8000; // 8 segundos de vídeo animado
+        const DURATION = state.duration * 1000;
 
         recorder.start();
 
@@ -1288,6 +1347,7 @@ function roundRect(ctx, x, y, w, h, r) {
 // ============================
 function showResult() {
   document.getElementById('result-screen').style.display = 'block';
+  document.querySelector('.result-title').textContent = `Seu Reel ${state.duration}s 🎬`;
   document.getElementById('captionText').textContent = state.caption;
   document.getElementById('hashtagsText').textContent = state.hashtags;
 
@@ -1428,6 +1488,11 @@ function resetApp() {
   state.currentStep = 1;
   state.videoBlob = null;
   state.animFrame = null;
+  state.duration = 15;
+
+  document.querySelectorAll('.duration-card').forEach(c => c.classList.remove('selected'));
+  const firstDuration = document.querySelector('.duration-card[data-duration="15"]');
+  if (firstDuration) firstDuration.classList.add('selected');
 
   document.getElementById('result-screen').style.display = 'none';
   document.getElementById('photoPreview').style.display = 'none';
