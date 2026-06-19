@@ -963,20 +963,22 @@ async function generateReel() {
     setLoadingStep(3);
     await sleep(400);
 
-    // 3. Build video with MediaRecorder
+    // 3. Build video with MediaRecorder (com timeout de segurança — nunca trava a tela)
     try {
-      const blob = await buildVideo();
+      const blob = await withTimeout(buildVideo(), 12000, 'VIDEO_TIMEOUT');
       state.videoBlob = blob;
       state.staticOnly = false;
     } catch (videoErr) {
-      if (videoErr.message === 'VIDEO_UNSUPPORTED') {
-        // Navegador não grava vídeo (ex: iOS muito antigo) — gera imagem estática
-        state.videoBlob = null;
-        state.staticOnly = true;
-        await buildStaticImage();
+      // Qualquer falha na gravação de vídeo (não suportado, travou, erro de codec,
+      // bug do iOS antigo etc.) cai para imagem estática em vez de travar ou mostrar erro.
+      console.warn('Fallback para imagem estática:', videoErr);
+      state.videoBlob = null;
+      state.staticOnly = true;
+      try {
+        await withTimeout(buildStaticImage(), 8000, 'IMAGE_TIMEOUT');
         showToast('⚠️ Seu navegador não suporta gravação de vídeo. Gerando imagem estática.');
-      } else {
-        throw videoErr;
+      } catch (imgErr) {
+        throw imgErr; // se nem a imagem estática funcionar, agora sim é erro de verdade
       }
     }
 
@@ -1171,10 +1173,15 @@ async function buildVideo() {
 
         const img = new Image();
         img.src = state.photo;
-        await new Promise(r => { img.onload = r; img.onerror = r; });
+        // Timeout de segurança: se onload/onerror nunca disparar (bug conhecido
+        // em WebKit antigo com imagens via data URL), não deixa travar pra sempre.
+        await Promise.race([
+          new Promise(r => { img.onload = r; img.onerror = r; }),
+          new Promise(r => setTimeout(r, 6000))
+        ]);
 
-        if (typeof canvas.captureStream !== 'function') {
-          throw new Error('Este navegador não suporta gravação de vídeo via Canvas.');
+        if (typeof MediaRecorder === 'undefined' || typeof canvas.captureStream !== 'function') {
+          throw new Error('VIDEO_UNSUPPORTED');
         }
 
         // Canvas-only video stream (sem áudio — adicione a música no Instagram ao postar)
@@ -1603,6 +1610,18 @@ function setupPWA() {
 // UTILS
 // ============================
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Garante que uma Promise nunca trava a tela pra sempre: se demorar mais que
+// `ms`, rejeita com `timeoutMsg` em vez de ficar pendente eternamente.
+function withTimeout(promise, ms, timeoutMsg) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(timeoutMsg)), ms);
+    promise.then(
+      v => { clearTimeout(timer); resolve(v); },
+      e => { clearTimeout(timer); reject(e); }
+    );
+  });
+}
 </script>
 
 <!-- PWA Service Worker Registration -->
