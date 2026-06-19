@@ -964,8 +964,21 @@ async function generateReel() {
     await sleep(400);
 
     // 3. Build video with MediaRecorder
-    const blob = await buildVideo();
-    state.videoBlob = blob;
+    try {
+      const blob = await buildVideo();
+      state.videoBlob = blob;
+      state.staticOnly = false;
+    } catch (videoErr) {
+      if (videoErr.message === 'VIDEO_UNSUPPORTED') {
+        // Navegador não grava vídeo (ex: iOS muito antigo) — gera imagem estática
+        state.videoBlob = null;
+        state.staticOnly = true;
+        await buildStaticImage();
+        showToast('⚠️ Seu navegador não suporta gravação de vídeo. Gerando imagem estática.');
+      } else {
+        throw videoErr;
+      }
+    }
 
     setLoadingStep(4);
     await sleep(400);
@@ -1098,109 +1111,192 @@ function generateFallbackCaption() {
   return styleData[toneKey];
 }
 
-// ============================
-// VIDEO BUILDER (Canvas + MediaRecorder)
-// ============================
-async function buildVideo() {
-  return new Promise(async (resolve, reject) => {
+function buildStaticImage() {
+  return new Promise((resolve, reject) => {
     const canvas = document.getElementById('reelCanvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = 540;
-    canvas.height = 960;
+    canvas.width = 540; canvas.height = 960;
 
     const img = new Image();
-    img.src = state.photo;
-    await new Promise(r => { img.onload = r; img.onerror = r; });
-
-    // Canvas-only video stream (sem áudio — adicione a música no Instagram ao postar)
-    const canvasStream = canvas.captureStream(30);
-
-    const chunks = [];
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-      ? 'video/webm;codecs=vp9'
-      : 'video/webm';
-    const recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 3_000_000 });
-
-    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      resolve(blob);
-    };
-
-    // Animation params
-    let startTime = null;
-    const DURATION = 8000; // 8s
-
-    recorder.start();
-
-    function drawFrame(ts) {
-      if (!startTime) startTime = ts;
-      const elapsed = ts - startTime;
-      const t = Math.min(elapsed / DURATION, 1);
-
-      ctx.clearRect(0, 0, 540, 960);
-
-      // BG
-      ctx.fillStyle = '#0a0a0f';
-      ctx.fillRect(0, 0, 540, 960);
-
-      // Photo with Ken Burns
-      const scale = 1 + t * 0.06;
-      const ox = (540 * scale - 540) / 2;
-      const oy = (960 * scale - 960) / 2;
-      ctx.drawImage(img, -ox, -oy, 540 * scale, 960 * scale);
-
-      // Gradient overlay
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, 540, 960);
       const grad = ctx.createLinearGradient(0, 0, 0, 960);
-      grad.addColorStop(0, 'rgba(0,0,0,0.15)');
-      grad.addColorStop(0.5, 'rgba(0,0,0,0.05)');
-      grad.addColorStop(1, 'rgba(0,0,0,0.82)');
+      grad.addColorStop(0, 'rgba(0,0,0,0.1)');
+      grad.addColorStop(0.6, 'rgba(0,0,0,0.05)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.85)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 540, 960);
 
-      // Accent bar
-      const accentProgress = Math.min(t * 3, 1);
-      const grd = ctx.createLinearGradient(0, 0, 540 * accentProgress, 0);
-      grd.addColorStop(0, '#a855f7');
-      grd.addColorStop(1, '#ec4899');
+      const grd = ctx.createLinearGradient(0, 0, 540, 0);
+      grd.addColorStop(0, '#a855f7'); grd.addColorStop(1, '#ec4899');
       ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, 540 * accentProgress, 4);
+      ctx.fillRect(0, 0, 540, 4);
 
-      // Main text (fade in)
-      const textAlpha = Math.min(t * 4, 1);
-      const mainText = state.reelText || getDefaultText();
-      const subText = state.reelSub;
-
-      ctx.save();
-      ctx.globalAlpha = textAlpha;
       ctx.textAlign = 'left';
-
-      // Main headline
       ctx.font = 'bold 46px Space Grotesk, sans-serif';
       ctx.fillStyle = '#ffffff';
       ctx.shadowColor = 'rgba(0,0,0,0.8)';
       ctx.shadowBlur = 20;
+      const mainText = state.reelText || getDefaultText();
       wrapText(ctx, mainText, 36, 820, 468, 56);
 
-      // Sub
-      if (subText) {
+      if (state.reelSub) {
         ctx.font = '22px Space Grotesk, sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.shadowBlur = 10;
-        wrapText(ctx, subText, 36, 890, 468, 28);
+        wrapText(ctx, state.reelSub, 36, 890, 468, 28);
       }
 
-      ctx.restore();
+      canvas.toBlob(blob => {
+        if (blob) { state.imageBlob = blob; resolve(blob); }
+        else reject(new Error('Não foi possível gerar a imagem.'));
+      }, 'image/png');
+    };
+    img.onerror = () => reject(new Error('Não foi possível carregar a foto.'));
+    img.src = state.photo;
+  });
+}
 
-      if (elapsed < DURATION) {
-        state.animFrame = requestAnimationFrame(drawFrame);
-      } else {
-        recorder.stop();
-        cancelAnimationFrame(state.animFrame);
+// ============================
+// VIDEO BUILDER (Canvas + MediaRecorder)
+// ============================
+async function buildVideo() {
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        const canvas = document.getElementById('reelCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 540;
+        canvas.height = 960;
+
+        const img = new Image();
+        img.src = state.photo;
+        await new Promise(r => { img.onload = r; img.onerror = r; });
+
+        if (typeof canvas.captureStream !== 'function') {
+          throw new Error('Este navegador não suporta gravação de vídeo via Canvas.');
+        }
+
+        // Canvas-only video stream (sem áudio — adicione a música no Instagram ao postar)
+        const canvasStream = canvas.captureStream(30);
+
+        // Safari/iOS nunca suportou webm — só mp4 (e só a partir do iOS 14.3).
+        // Testamos várias opções em ordem de preferência e usamos a primeira suportada.
+        const mimeCandidates = [
+          'video/webm;codecs=vp9',
+          'video/webm;codecs=vp8',
+          'video/webm',
+          'video/mp4;codecs=h264',
+          'video/mp4',
+        ];
+        const mimeType = mimeCandidates.find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m));
+
+        if (!mimeType) {
+          // Nenhum formato de vídeo suportado (ex: iOS muito antigo). Cai pra imagem estática
+          // em vez de travar a tela pra sempre.
+          throw new Error('VIDEO_UNSUPPORTED');
+        }
+
+        const chunks = [];
+        let recorder;
+        try {
+          recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 3_000_000 });
+        } catch (e) {
+          throw new Error('VIDEO_UNSUPPORTED');
+        }
+
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onerror = e => reject(e.error || new Error('Erro ao gravar vídeo'));
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
+          resolve(blob);
+        };
+
+        // Salvaguarda: se nada acontecer em 20s, não deixa a tela travada pra sempre.
+        const safetyTimeout = setTimeout(() => {
+          try { recorder.stop(); } catch (e) {}
+          reject(new Error('Tempo de renderização excedido. Tente novamente.'));
+        }, 20000);
+
+        // Animation params
+        let startTime = null;
+        const DURATION = 8000; // 8s
+
+        recorder.start();
+
+        function drawFrame(ts) {
+          if (!startTime) startTime = ts;
+          const elapsed = ts - startTime;
+          const t = Math.min(elapsed / DURATION, 1);
+
+          ctx.clearRect(0, 0, 540, 960);
+
+          // BG
+          ctx.fillStyle = '#0a0a0f';
+          ctx.fillRect(0, 0, 540, 960);
+
+          // Photo with Ken Burns
+          const scale = 1 + t * 0.06;
+          const ox = (540 * scale - 540) / 2;
+          const oy = (960 * scale - 960) / 2;
+          ctx.drawImage(img, -ox, -oy, 540 * scale, 960 * scale);
+
+          // Gradient overlay
+          const grad = ctx.createLinearGradient(0, 0, 0, 960);
+          grad.addColorStop(0, 'rgba(0,0,0,0.15)');
+          grad.addColorStop(0.5, 'rgba(0,0,0,0.05)');
+          grad.addColorStop(1, 'rgba(0,0,0,0.82)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, 540, 960);
+
+          // Accent bar
+          const accentProgress = Math.min(t * 3, 1);
+          const grd = ctx.createLinearGradient(0, 0, 540 * accentProgress, 0);
+          grd.addColorStop(0, '#a855f7');
+          grd.addColorStop(1, '#ec4899');
+          ctx.fillStyle = grd;
+          ctx.fillRect(0, 0, 540 * accentProgress, 4);
+
+          // Main text (fade in)
+          const textAlpha = Math.min(t * 4, 1);
+          const mainText = state.reelText || getDefaultText();
+          const subText = state.reelSub;
+
+          ctx.save();
+          ctx.globalAlpha = textAlpha;
+          ctx.textAlign = 'left';
+
+          // Main headline
+          ctx.font = 'bold 46px Space Grotesk, sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.shadowBlur = 20;
+          wrapText(ctx, mainText, 36, 820, 468, 56);
+
+          // Sub
+          if (subText) {
+            ctx.font = '22px Space Grotesk, sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.shadowBlur = 10;
+            wrapText(ctx, subText, 36, 890, 468, 28);
+          }
+
+          ctx.restore();
+
+          if (elapsed < DURATION) {
+            state.animFrame = requestAnimationFrame(drawFrame);
+          } else {
+            clearTimeout(safetyTimeout);
+            recorder.stop();
+            cancelAnimationFrame(state.animFrame);
+          }
+        }
+
+        requestAnimationFrame(drawFrame);
+      } catch (err) {
+        reject(err);
       }
-    }
-
-    requestAnimationFrame(drawFrame);
+    })();
   });
 }
 
@@ -1295,21 +1391,36 @@ function drawStaticPreview() {
 // ============================
 // DOWNLOAD & SHARE
 // ============================
+function getMediaBlob() {
+  return state.videoBlob || state.imageBlob || null;
+}
+
+function getMediaExtAndType(blob) {
+  if (blob.type.includes('mp4')) return { ext: 'mp4', type: 'video/mp4' };
+  if (blob.type.includes('webm')) return { ext: 'webm', type: 'video/webm' };
+  if (blob.type.includes('png')) return { ext: 'png', type: 'image/png' };
+  return { ext: 'webp', type: blob.type || 'application/octet-stream' };
+}
+
 function downloadVideo() {
-  if (!state.videoBlob) { showToast('⏳ Aguarde o vídeo finalizar'); return; }
-  const url = URL.createObjectURL(state.videoBlob);
+  const blob = getMediaBlob();
+  if (!blob) { showToast('⏳ Aguarde a renderização finalizar'); return; }
+  const { ext } = getMediaExtAndType(blob);
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `reel-${Date.now()}.webm`;
+  a.download = `reel-${Date.now()}.${ext}`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('✅ Vídeo baixado!');
+  showToast(state.staticOnly ? '✅ Imagem baixada!' : '✅ Vídeo baixado!');
 }
 
 async function shareNative() {
-  if (!state.videoBlob) { showToast('⏳ Aguarde o vídeo finalizar'); return; }
-  const file = new File([state.videoBlob], 'reel.webm', { type: 'video/webm' });
-  if (navigator.share && navigator.canShare({ files: [file] })) {
+  const blob = getMediaBlob();
+  if (!blob) { showToast('⏳ Aguarde a renderização finalizar'); return; }
+  const { ext, type } = getMediaExtAndType(blob);
+  const file = new File([blob], `reel.${ext}`, { type });
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'Meu Reel ✨', text: state.caption + '\n\n' + state.hashtags });
     } catch (e) { /* user cancelled */ }
@@ -1324,8 +1435,9 @@ function copyCap() {
 }
 
 async function compartilharInstagram() {
-  if (!state.videoBlob) {
-    showToast('⏳ Aguarde o vídeo finalizar');
+  const blob = getMediaBlob();
+  if (!blob) {
+    showToast('⏳ Aguarde a renderização finalizar');
     return;
   }
 
@@ -1334,11 +1446,12 @@ async function compartilharInstagram() {
   let copied = false;
   try { await navigator.clipboard.writeText(full); copied = true; } catch(e) {}
 
-  const file = new File([state.videoBlob], 'reel.mp4', { type: 'video/mp4' });
+  const { ext, type } = getMediaExtAndType(blob);
+  const file = new File([blob], `reel.${ext}`, { type });
 
-  // 2. Caminho ideal: Web Share API com o vídeo anexado.
+  // 2. Caminho ideal: Web Share API com a mídia anexada.
   //    No mobile, abre a share sheet nativa e o Instagram aparece como
-  //    opção já com o vídeo carregado — só falta colar a legenda.
+  //    opção já com o vídeo/imagem carregado — só falta colar a legenda.
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     if (copied) {
       showToast('📋 Legenda copiada! No Instagram, toque em "Legenda" e cole antes de postar.');
@@ -1352,20 +1465,20 @@ async function compartilharInstagram() {
   }
 
   // 3. Fallback (ex: desktop, ou navegador sem suporte a compartilhar arquivos):
-  //    baixa o vídeo e abre o Instagram no navegador. Não existe deep link
-  //    público do Instagram que receba o vídeo ou preencha a legenda
+  //    baixa o arquivo e abre o Instagram no navegador. Não existe deep link
+  //    público do Instagram que receba mídia ou preencha a legenda
   //    automaticamente, então o usuário precisa subir o arquivo baixado.
-  const url = URL.createObjectURL(state.videoBlob);
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'reel.mp4';
+  a.download = `reel.${ext}`;
   a.click();
   URL.revokeObjectURL(url);
 
   if (copied) {
-    showToast('⬇️ Vídeo baixado e legenda copiada! Suba o vídeo no Instagram e cole a legenda.');
+    showToast('⬇️ Mídia baixada e legenda copiada! Suba no Instagram e cole a legenda.');
   } else {
-    showToast('⬇️ Vídeo baixado! Copie a legenda com 📋, suba o vídeo no Instagram e cole.');
+    showToast('⬇️ Mídia baixada! Copie a legenda com 📋, suba no Instagram e cole.');
   }
   setTimeout(() => window.open('https://www.instagram.com/', '_blank'), 1200);
 }
