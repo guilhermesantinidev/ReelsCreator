@@ -47,7 +47,9 @@
     .upload-icon{font-size:36px;margin-bottom:10px}
     .upload-text{font-size:15px;font-weight:500;margin-bottom:4px}
     .upload-sub{font-size:12px;color:var(--muted)}
-    .photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+    .photos-meta{display:none;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:10px}
+    .drag-hint{display:none;font-size:11px;color:var(--muted)}
+    .photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
     .photo-thumb{position:relative;aspect-ratio:9/16;border-radius:10px;overflow:hidden;border:2px solid var(--border);transition:all .2s;cursor:grab}
     .photo-thumb.drag-active{border-color:var(--accent);opacity:.7;transform:scale(.96)}
     .photo-thumb.drag-over-target{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2)}
@@ -86,6 +88,59 @@
     .duration-seconds{font-size:22px;font-weight:700;color:var(--text);font-family:var(--mono);margin-bottom:4px}
     .duration-card.selected .duration-seconds{color:var(--accent)}
     .duration-desc{font-size:11px;color:var(--muted)}
+    .filter-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+    .filter-card{flex:0 0 auto;width:64px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:8px 6px;cursor:pointer;text-align:center;transition:all .2s}
+    .filter-card:hover{border-color:rgba(168,85,247,.4)}
+    .filter-card.selected{border-color:var(--accent);background:rgba(168,85,247,.1)}
+    .filter-swatch{width:32px;height:32px;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:14px}
+    .filter-swatch-none{background:var(--surface);border:1px dashed var(--border)}
+    .filter-swatch-vintage{background:linear-gradient(135deg,#d4a574,#8b6f47)}
+    .filter-swatch-bw{background:linear-gradient(135deg,#a0a0a0,#1a1a1a)}
+    .filter-swatch-saturated{background:linear-gradient(135deg,#ff3d7a,#06b6d4)}
+    .filter-swatch-neon{background:linear-gradient(135deg,#a855f7,#39ff8c)}
+    .filter-name{font-size:10px;font-weight:600;color:var(--text)}
+    input[type="range"]{accent-color:var(--accent);width:100%}
+    .field label .wm-size-val{color:var(--accent);font-family:var(--mono)}
+    .watermark-pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .wm-pos-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 8px;font-size:12px;font-weight:600;text-align:center;cursor:pointer;transition:all .2s;color:var(--text)}
+    .wm-pos-card:hover{border-color:rgba(168,85,247,.4)}
+    .wm-pos-card.selected{border-color:var(--accent);background:rgba(168,85,247,.1);color:var(--accent)}
+    .header-actions{display:flex;align-items:center;gap:8px}
+    .icon-btn{padding:8px 10px}
+    .btn-options{width:100%;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .2s;margin-top:10px}
+    .btn-options:hover{border-color:var(--accent)}
+    .btn-options:disabled{opacity:.6;cursor:not-allowed}
+    .caption-options-wrap{display:none;flex-direction:column;gap:8px;margin-top:10px}
+    .caption-option-card{display:flex;gap:10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:all .2s}
+    .caption-option-card:hover{border-color:rgba(168,85,247,.4)}
+    .caption-option-card.selected{border-color:var(--accent);background:rgba(168,85,247,.1)}
+    .caption-option-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;margin-top:2px;position:relative;transition:border-color .2s}
+    .caption-option-card.selected .caption-option-radio{border-color:var(--accent)}
+    .caption-option-card.selected .caption-option-radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+    .caption-option-body{flex:1;min-width:0}
+    .caption-option-caption{font-size:13px;line-height:1.5;color:var(--text)}
+    .caption-option-hashtags{font-size:11px;color:var(--accent);margin-top:4px;line-height:1.5}
+    .history-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300}
+    .history-overlay.show{display:block}
+    .history-panel{position:fixed;top:0;right:0;height:100vh;width:320px;max-width:88vw;background:var(--surface);border-left:1px solid var(--border);z-index:301;transform:translateX(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);display:flex;flex-direction:column}
+    .history-overlay.show .history-panel{transform:translateX(0)}
+    .history-header{display:flex;align-items:center;justify-content:space-between;padding:18px 16px;border-bottom:1px solid var(--border)}
+    .history-title{font-size:15px;font-weight:700}
+    .history-close{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;padding:2px 6px}
+    .history-close:hover{color:var(--text)}
+    .history-list{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+    .history-empty{font-size:13px;color:var(--muted);text-align:center;padding:40px 10px}
+    .history-item{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px}
+    .history-item-caption{font-size:13px;line-height:1.5;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .history-item-hashtags{font-size:11px;color:var(--accent);margin-top:6px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+    .history-item-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+    .history-item-date{font-size:10px;color:var(--muted)}
+    .history-item-copy{background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:8px;padding:5px 10px;cursor:pointer;font-family:var(--font)}
+    .history-item-copy:hover{border-color:var(--accent)}
+    .history-footer{padding:14px 16px;border-top:1px solid var(--border)}
+    .history-clear{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:10px;font-size:13px;cursor:pointer;font-family:var(--font);transition:all .2s}
+    .history-clear:hover{border-color:#e23a3a;color:#e23a3a}
+    .fade-caption{transition:opacity .25s ease}
     .preview-wrap{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:9/16;max-height:260px;margin:0 auto;width:fit-content;box-shadow:0 16px 48px rgba(0,0,0,.5);background:#000}
     #previewCanvas{display:block;height:100%;width:auto}
     .preview-badge{position:absolute;top:8px;right:8px;background:rgba(168,85,247,.85);backdrop-filter:blur(6px);color:#fff;font-size:9px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:20px;text-transform:uppercase}
@@ -157,6 +212,19 @@
   </div>
 </div>
 
+<div class="history-overlay" id="historyOverlay" onclick="closeHistoryPanelOutside(event)">
+  <div class="history-panel" id="historyPanel">
+    <div class="history-header">
+      <div class="history-title">🕐 Histórico de Legendas</div>
+      <button class="history-close" onclick="closeHistoryPanel()">×</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+    <div class="history-footer">
+      <button class="history-clear" onclick="clearHistory()">🗑️ Limpar histórico</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div id="install-banner">
   <p><strong>Instalar ReelAI</strong><br>Acesso rápido na tela inicial</p>
@@ -169,10 +237,15 @@
       <div class="logo-icon">✨</div>
       <div class="logo-text">Reel<span>AI</span></div>
     </div>
-    <button class="api-btn" id="apiKeyBtn" onclick="openApiModal()">
-      <span id="apiKeyIcon">🔓</span>
-      <span id="apiKeyLabel">API Key</span>
-    </button>
+    <div class="header-actions">
+      <button class="api-btn icon-btn" id="historyBtn" onclick="openHistoryPanel()" title="Histórico de legendas">
+        <span>🕐</span>
+      </button>
+      <button class="api-btn" id="apiKeyBtn" onclick="openApiModal()">
+        <span id="apiKeyIcon">🔓</span>
+        <span id="apiKeyLabel">API Key</span>
+      </button>
+    </div>
   </header>
   <main>
     <div class="steps" id="stepsBar">
@@ -191,7 +264,32 @@
           <div class="upload-text">Arraste ou toque para escolher</div>
           <div class="upload-sub">JPG, PNG, WEBP · até 10 MB cada</div>
         </div>
+        <div class="photos-meta" id="photosMeta">
+          <span id="photosCount">0/6 fotos</span>
+          <span class="drag-hint" id="dragHint">✋ Arraste para reordenar</span>
+        </div>
         <div id="photosGrid" class="photos-grid" style="display:none"></div>
+      </div>
+
+      <div class="panel" id="filterPanel" style="display:none">
+        <div class="panel-title">🎨 Filtro</div>
+        <div class="filter-row">
+          <div class="filter-card selected" data-filter="none" onclick="selectFilter(this,'none')">
+            <div class="filter-swatch filter-swatch-none">🚫</div><div class="filter-name">Nenhum</div>
+          </div>
+          <div class="filter-card" data-filter="vintage" onclick="selectFilter(this,'vintage')">
+            <div class="filter-swatch filter-swatch-vintage"></div><div class="filter-name">Vintage</div>
+          </div>
+          <div class="filter-card" data-filter="bw" onclick="selectFilter(this,'bw')">
+            <div class="filter-swatch filter-swatch-bw"></div><div class="filter-name">P&B</div>
+          </div>
+          <div class="filter-card" data-filter="saturated" onclick="selectFilter(this,'saturated')">
+            <div class="filter-swatch filter-swatch-saturated"></div><div class="filter-name">Saturado</div>
+          </div>
+          <div class="filter-card" data-filter="neon" onclick="selectFilter(this,'neon')">
+            <div class="filter-swatch filter-swatch-neon"></div><div class="filter-name">Neon</div>
+          </div>
+        </div>
       </div>
 
       <div class="panel" id="transitionPanel" style="display:none">
@@ -212,6 +310,26 @@
           <div class="style-card" onclick="selectStyle(this,'food')"><div class="style-emoji">🍽️</div><div class="style-name">Gastronomia</div><div class="style-desc">Food & receitas</div></div>
           <div class="style-card" onclick="selectStyle(this,'business')"><div class="style-emoji">💼</div><div class="style-name">Business</div><div class="style-desc">Empreendedorismo</div></div>
           <div class="style-card" onclick="selectStyle(this,'motivation')"><div class="style-emoji">🔥</div><div class="style-name">Motivação</div><div class="style-desc">Inspire & engaje</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">✍️ Marca d'água (opcional)</div>
+        <div class="field">
+          <input type="text" id="watermarkText" maxlength="30" placeholder="@seu_usuario" oninput="updateWatermarkText(this.value)" />
+        </div>
+        <div class="field">
+          <label>Tamanho: <span class="wm-size-val" id="watermarkSizeLabel">18px</span></label>
+          <input type="range" id="watermarkSize" min="12" max="36" value="18" oninput="updateWatermarkSize(this.value)" />
+        </div>
+        <div class="field">
+          <label>Posição</label>
+          <div class="watermark-pos-grid">
+            <div class="wm-pos-card" data-pos="top-left" onclick="selectWatermarkPos(this,'top-left')">↖️ Sup. esq.</div>
+            <div class="wm-pos-card" data-pos="top-right" onclick="selectWatermarkPos(this,'top-right')">↗️ Sup. dir.</div>
+            <div class="wm-pos-card" data-pos="bottom-left" onclick="selectWatermarkPos(this,'bottom-left')">↙️ Inf. esq.</div>
+            <div class="wm-pos-card selected" data-pos="bottom-right" onclick="selectWatermarkPos(this,'bottom-right')">↘️ Inf. dir.</div>
+          </div>
         </div>
       </div>
 
@@ -247,6 +365,8 @@
             <option value="profissional">💼 Profissional</option>
           </select>
         </div>
+        <button class="btn-options" id="btnGenOptions" onclick="generateCaptionOptionsFlow()">🎲 Gerar 3 opções de legenda</button>
+        <div class="caption-options-wrap" id="captionOptionsWrap"></div>
       </div>
 
       <div class="panel">
@@ -258,7 +378,7 @@
         </div>
       </div>
 
-      <button class="btn-generate" id="btnGenerate" onclick="generateReel()">✨ Gerar Reel com IA</button>
+      <button class="btn-generate" id="btnGenerate" onclick="generateReel()" disabled>✨ Gerar Reel com IA</button>
     </div>
   </main>
 </div>
@@ -269,7 +389,7 @@
   <div class="loading-title">Criando seu Reel</div>
   <div class="loading-sub" id="loadingSub">Isso leva só alguns segundos...</div>
   <div class="loading-steps">
-    <div class="lstep active" id="ls1"><span class="lstep-icon">🤖</span> Gerando legenda com IA</div>
+    <div class="lstep active" id="ls1"><span class="lstep-icon">🤖</span> Preparando legenda</div>
     <div class="lstep" id="ls2"><span class="lstep-icon">🎬</span> Montando o vídeo</div>
     <div class="lstep" id="ls3"><span class="lstep-icon">🖌️</span> Aplicando transições</div>
     <div class="lstep" id="ls4"><span class="lstep-icon">✅</span> Finalizando</div>
@@ -287,10 +407,11 @@
   </div>
   <div class="caption-box">
     <div class="caption-box-title">📝 Legenda IA</div>
-    <div class="caption-text" id="captionText"></div>
-    <div class="hashtags" id="hashtagsText"></div>
+    <div class="caption-text fade-caption" id="captionText"></div>
+    <div class="hashtags fade-caption" id="hashtagsText"></div>
     <button class="btn-copy" onclick="copyCap()">📋 Copiar legenda + hashtags</button>
   </div>
+  <button class="btn-copy" id="btnRegen" onclick="regenerateCaption()" style="width:100%;margin-bottom:14px">🔄 Regerar legenda</button>
   <div class="action-grid">
     <button class="btn-action" onclick="downloadVideo()"><span>⬇️</span><span>Baixar vídeo</span></button>
     <button class="btn-action" onclick="shareNative()"><span>📤</span><span>Compartilhar</span></button>
@@ -321,6 +442,18 @@ const state = {
   previewFrame: null,
   duration: 15,
   transition: 'fade',
+  filter: 'none',
+  watermark: { text: '', size: 18, position: 'bottom-right' },
+  captionOptions: [],
+  selectedCaptionIndex: null,
+};
+
+const FILTER_CSS = {
+  none: 'none',
+  vintage: 'sepia(0.6) contrast(1.1) brightness(0.95) saturate(0.8)',
+  bw: 'grayscale(1) contrast(1.1)',
+  saturated: 'saturate(2) contrast(1.05)',
+  neon: 'saturate(3) hue-rotate(20deg) brightness(1.1) contrast(1.2)',
 };
 
 // ============================
@@ -389,16 +522,25 @@ function renderPhotoGrid() {
   const grid = document.getElementById('photosGrid');
   const zone = document.getElementById('uploadZone');
   const panel = document.getElementById('transitionPanel');
+  const filterPanel = document.getElementById('filterPanel');
+  const meta = document.getElementById('photosMeta');
+  const countEl = document.getElementById('photosCount');
+  const dragHint = document.getElementById('dragHint');
+  countEl.textContent = `${state.photos.length}/6 fotos`;
+  dragHint.style.display = state.photos.length >= 2 ? 'inline' : 'none';
   if (state.photos.length === 0) {
-    grid.style.display = 'none'; zone.style.display = 'block'; panel.style.display = 'none'; return;
+    grid.style.display = 'none'; zone.style.display = 'block'; panel.style.display = 'none';
+    filterPanel.style.display = 'none'; meta.style.display = 'none';
+    return;
   }
-  zone.style.display = 'none'; grid.style.display = 'grid';
+  zone.style.display = 'none'; grid.style.display = 'grid'; meta.style.display = 'flex';
   panel.style.display = state.photos.length >= 2 ? 'block' : 'none';
+  filterPanel.style.display = 'block';
   grid.innerHTML = '';
   state.photos.forEach((p, i) => {
     const thumb = document.createElement('div');
     thumb.className = 'photo-thumb'; thumb.draggable = true; thumb.dataset.idx = i;
-    thumb.innerHTML = `<img src="${p.src}" alt="foto ${i+1}"><div class="photo-thumb-num">${i+1}</div><button class="photo-thumb-del" onclick="removePhoto(${i})">×</button>`;
+    thumb.innerHTML = `<img src="${p.src}" alt="foto ${i+1}" style="filter:${FILTER_CSS[state.filter]}"><div class="photo-thumb-num">${i+1}</div><button class="photo-thumb-del" onclick="removePhoto(${i})">×</button>`;
     thumb.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', i); thumb.classList.add('drag-active'); });
     thumb.addEventListener('dragend', () => thumb.classList.remove('drag-active'));
     thumb.addEventListener('dragover', e => { e.preventDefault(); thumb.classList.add('drag-over-target'); });
@@ -433,6 +575,17 @@ function selectDuration(el, s) {
   document.querySelectorAll('.duration-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected'); state.duration = s;
 }
+function selectFilter(el, val) {
+  document.querySelectorAll('.filter-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected'); state.filter = val;
+  document.querySelectorAll('#photosGrid .photo-thumb img').forEach(img => img.style.filter = FILTER_CSS[val]);
+}
+function updateWatermarkText(v) { state.watermark.text = v.slice(0, 30); }
+function updateWatermarkSize(v) { state.watermark.size = parseInt(v, 10); document.getElementById('watermarkSizeLabel').textContent = v + 'px'; }
+function selectWatermarkPos(el, pos) {
+  document.querySelectorAll('.wm-pos-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected'); state.watermark.position = pos;
+}
 
 // ============================
 // NAVIGATION
@@ -441,6 +594,14 @@ function goToStep2() {
   if (!state.photos.length) { showToast('📸 Adicione pelo menos uma foto!'); return; }
   if (!state.style) { showToast('🎨 Escolha um estilo!'); return; }
   showStep(2); updateStepBar(2); startPreview();
+  if (state.captionOptions.length) {
+    renderCaptionOptions();
+    if (state.selectedCaptionIndex !== null) {
+      const cards = document.querySelectorAll('.caption-option-card');
+      if (cards[state.selectedCaptionIndex]) cards[state.selectedCaptionIndex].classList.add('selected');
+    }
+  }
+  updateGenerateButtonState();
 }
 function showStep(n) {
   [1,2].forEach(i => document.getElementById('step'+i).style.display = i===n ? 'block' : 'none');
@@ -505,11 +666,13 @@ function drawFrame(ctx, W, H, photos, curIdx, nextIdx, tProgress, globalT) {
   function drawPhoto(p, alpha, ox, scale) {
     if (!p) return;
     ctx.save(); ctx.globalAlpha = alpha;
+    ctx.filter = FILTER_CSS[state.filter] || 'none';
     const iw = p.img.naturalWidth || p.img.width;
     const ih = p.img.naturalHeight || p.img.height;
     const r = Math.max(W/iw, H/ih) * (scale||1);
     const dw = iw*r, dh = ih*r;
     ctx.drawImage(p.img, (W-dw)/2 + (ox||0), (H-dh)/2, dw, dh);
+    ctx.filter = 'none';
     ctx.restore();
   }
 
@@ -533,6 +696,27 @@ function drawFrame(ctx, W, H, photos, curIdx, nextIdx, tProgress, globalT) {
   g.addColorStop(1,'rgba(0,0,0,0.4)');
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
+  // watermark
+  const wm = state.watermark;
+  if (wm && wm.text) {
+    ctx.save();
+    const scaleFactor = W/540;
+    const fontSize = Math.max(8, wm.size * scaleFactor);
+    const padding = 16 * scaleFactor;
+    ctx.font = `bold ${fontSize}px 'Space Grotesk', sans-serif`;
+    ctx.textBaseline = 'alphabetic';
+    let x, y, align;
+    if (wm.position.includes('left')) { align = 'left'; x = padding; }
+    else { align = 'right'; x = W - padding; }
+    if (wm.position.includes('top')) { y = padding + fontSize*0.85; }
+    else { y = H - padding; }
+    ctx.textAlign = align;
+    ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 4; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+    ctx.fillStyle = '#fff';
+    ctx.fillText(wm.text, x, y);
+    ctx.restore();
+  }
+
   // progress bar
   const grd = ctx.createLinearGradient(0,0,W*globalT,0);
   grd.addColorStop(0,'#a855f7'); grd.addColorStop(1,'#ec4899');
@@ -543,11 +727,11 @@ function drawFrame(ctx, W, H, photos, curIdx, nextIdx, tProgress, globalT) {
 // GENERATE
 // ============================
 async function generateReel() {
+  if (!state.caption) { showToast('💬 Gere e selecione uma legenda primeiro!'); return; }
   stopPreview();
   showLoading(true); setLoadingStep(1);
   try {
-    const cap = state.groqKey ? await generateCaptionGroq() : generateFallbackCaption();
-    state.caption = cap.text; state.hashtags = cap.hashtags;
+    await sleep(250);
     setLoadingStep(2); await sleep(300);
     setLoadingStep(3); await sleep(200);
     try {
@@ -560,6 +744,7 @@ async function generateReel() {
       showToast('⚠️ Navegador sem suporte a vídeo. Gerando imagem estática.');
     }
     setLoadingStep(4); await sleep(400);
+    saveToHistory({ caption: state.caption, hashtags: state.hashtags, style: state.style, date: new Date().toISOString() });
     showLoading(false); showResult();
   } catch(err) {
     showLoading(false); showToast('❌ '+err.message); console.error(err);
@@ -679,8 +864,108 @@ Responda SOMENTE com este JSON, sem nenhum texto antes ou depois, sem markdown:
   return { text: parsed.caption, hashtags: parsed.hashtags || '' };
 }
 
-function generateFallbackCaption() {
+// ============================
+// GROQ — 3 OPÇÕES DE LEGENDA
+// ============================
+async function generateCaptionOptionsGroq() {
+  const styleMap = {lifestyle:'lifestyle e viagens',fashion:'moda e beleza',fitness:'fitness e saúde',food:'gastronomia e receitas',business:'empreendedorismo',motivation:'motivação e superação'};
   const tone = document.getElementById('toneSelect').value;
+  const context = document.getElementById('contextInput').value;
+  const n = state.photos.length;
+  const prompt = `Crie 3 legendas DIFERENTES entre si para Instagram Reels de ${styleMap[state.style]||state.style} com ${n} foto${n>1?'s':''}.
+Contexto: ${context||'nenhum'}
+Tom preferido: ${tone} (varie sutilmente o estilo entre as 3 opções, mantendo a essência do tom)
+Responda SOMENTE com este JSON, sem nenhum texto antes ou depois, sem markdown:
+{"options":[{"caption":"legenda em portugues com emojis maximo 150 chars","hashtags":"#tag1 #tag2 #tag3 #tag4 #tag5 #tag6 #tag7 #tag8"},{"caption":"...","hashtags":"..."},{"caption":"...","hashtags":"..."}]}`;
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.groqKey}` },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        { role: 'system', content: 'Você é um assistente que responde APENAS com JSON válido, sem markdown, sem texto extra, sem explicações.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.85,
+      max_tokens: 700,
+      response_format: { type: 'json_object' }
+    })
+  });
+  if (!res.ok) { const e=await res.json().catch(()=>({})); throw new Error(e.error?.message||`Groq API ${res.status}`); }
+  const data = await res.json();
+  const raw = data.choices[0].message.content;
+  let text = raw.trim().replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Resposta da IA fora do formato esperado. Tente novamente.');
+  let parsed;
+  try {
+    parsed = JSON.parse(match[0]);
+  } catch(e) {
+    const clean = match[0].replace(/[\x00-\x1F\x7F]/g, ' ').replace(/,\s*([}\]])/g, '$1');
+    parsed = JSON.parse(clean);
+  }
+  if (!parsed.options || !Array.isArray(parsed.options) || !parsed.options.length) throw new Error('Opções não geradas. Tente novamente.');
+  return parsed.options.slice(0,3).map(o => ({ caption: o.caption || '', hashtags: o.hashtags || '' }));
+}
+
+function generateFallbackCaptionOptions() {
+  const tones = ['inspirador','motivacional','divertido'];
+  return tones.map(t => { const c = generateFallbackCaption(t); return { caption: c.text, hashtags: c.hashtags }; });
+}
+
+async function generateCaptionOptionsFlow() {
+  if (!state.style) { showToast('🎨 Escolha um estilo primeiro!'); return; }
+  const btn = document.getElementById('btnGenOptions');
+  const original = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '⏳ Gerando opções...';
+  try {
+    let options;
+    try {
+      options = state.groqKey ? await generateCaptionOptionsGroq() : generateFallbackCaptionOptions();
+    } catch (err) {
+      console.warn('Caption options fallback:', err);
+      showToast('⚠️ Falha na IA, usando legendas padrão.');
+      options = generateFallbackCaptionOptions();
+    }
+    state.captionOptions = options;
+    state.selectedCaptionIndex = null;
+    state.caption = ''; state.hashtags = '';
+    renderCaptionOptions();
+    updateGenerateButtonState();
+  } finally {
+    btn.disabled = false; btn.innerHTML = original;
+  }
+}
+
+function renderCaptionOptions() {
+  const wrap = document.getElementById('captionOptionsWrap');
+  wrap.style.display = 'flex';
+  wrap.innerHTML = state.captionOptions.map((o, i) => `
+    <div class="caption-option-card" data-idx="${i}" onclick="selectCaptionOption(${i})">
+      <div class="caption-option-radio"></div>
+      <div class="caption-option-body">
+        <div class="caption-option-caption">${escapeHtml(o.caption)}</div>
+        <div class="caption-option-hashtags">${escapeHtml(o.hashtags)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function selectCaptionOption(i) {
+  const opt = state.captionOptions[i]; if (!opt) return;
+  state.selectedCaptionIndex = i;
+  state.caption = opt.caption; state.hashtags = opt.hashtags;
+  document.querySelectorAll('.caption-option-card').forEach((c, idx) => c.classList.toggle('selected', idx === i));
+  updateGenerateButtonState();
+}
+
+function updateGenerateButtonState() {
+  const btn = document.getElementById('btnGenerate');
+  if (btn) btn.disabled = !state.caption;
+}
+
+function generateFallbackCaption(toneOverride) {
+  const tone = toneOverride || document.getElementById('toneSelect').value;
   const ctx = document.getElementById('contextInput').value;
   const db = {
     lifestyle:{inspirador:{text:`Cada momento é único e irrepetível ✨ ${ctx||'Viva intensamente!'}`,hashtags:'#lifestyle #vidaboa #momentos #gratidao #instadaily #vibes #felicidade #vida #instabr #vivabem'},divertido:{text:`Vida é curta demais pra ser chata 😂🎉 ${ctx||''}`,hashtags:'#lifestyle #diversao #fun #instabr #alegria #vidaboa #boadiversao #humor #vibes #happy'},misterioso:{text:`Alguns lugares guardam segredos 🌙🗝️ ${ctx||''}`,hashtags:'#lifestyle #mistério #dark #aesthetic #vibes #instabr #moodygram #nightvibes #sombra #soul'},motivacional:{text:`A vida premia quem não para 🔥 ${ctx||'Siga em frente!'}`,hashtags:'#motivacao #lifestyle #foco #disciplina #sucesso #mentalidade #conquista #instabr #determinacao #meta'},romantico:{text:`Nos pequenos detalhes mora a beleza 💕 ${ctx||''}`,hashtags:'#lifestyle #amor #romantico #belleza #vida #felicidade #instabr #feeling #moments #loveit'},profissional:{text:`Resultados não acontecem por acaso. 💼 ${ctx||''}`,hashtags:'#lifestyle #profissional #resultado #trabalho #carreira #mentalidade #sucesso #instabr #focus #business'}},
@@ -739,6 +1024,36 @@ async function shareNative() {
 function copyCap() {
   navigator.clipboard.writeText(`${state.caption}\n\n${state.hashtags}`).then(() => showToast('📋 Legenda copiada!'));
 }
+async function regenerateCaption() {
+  const btn = document.getElementById('btnRegen');
+  const original = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '⏳ Gerando...';
+  try {
+    let cap;
+    if (state.groqKey) {
+      try { cap = await generateCaptionGroq(); }
+      catch (err) { console.warn('Regenerate fallback:', err); cap = generateFallbackCaption(randomTone()); }
+    } else {
+      cap = generateFallbackCaption(randomTone());
+    }
+    const ct = document.getElementById('captionText');
+    const ht = document.getElementById('hashtagsText');
+    ct.style.opacity = 0; ht.style.opacity = 0;
+    setTimeout(() => {
+      state.caption = cap.text; state.hashtags = cap.hashtags;
+      ct.textContent = cap.text; ht.textContent = cap.hashtags;
+      ct.style.opacity = 1; ht.style.opacity = 1;
+    }, 250);
+  } catch (err) {
+    showToast('❌ '+err.message);
+  } finally {
+    btn.disabled = false; btn.innerHTML = original;
+  }
+}
+function randomTone() {
+  const tones = ['inspirador','divertido','misterioso','motivacional','romantico','profissional'];
+  return tones[Math.floor(Math.random()*tones.length)];
+}
 async function compartilharInstagram() {
   const blob = getBlob(); if (!blob) { showToast('⏳ Aguarde finalizar'); return; }
   let copied = false;
@@ -763,15 +1078,22 @@ function goBack() {
 }
 function resetApp() {
   stopPreview(); if(state.animFrame) cancelAnimationFrame(state.animFrame);
-  Object.assign(state,{photos:[],style:null,caption:'',hashtags:'',currentStep:1,videoBlob:null,imageBlob:null,staticOnly:false,animFrame:null,duration:15,transition:'fade'});
+  Object.assign(state,{photos:[],style:null,caption:'',hashtags:'',currentStep:1,videoBlob:null,imageBlob:null,staticOnly:false,animFrame:null,duration:15,transition:'fade',filter:'none',watermark:{text:'',size:18,position:'bottom-right'},captionOptions:[],selectedCaptionIndex:null});
   document.getElementById('result-screen').style.display='none';
   document.getElementById('photosGrid').style.display='none'; document.getElementById('photosGrid').innerHTML='';
   document.getElementById('uploadZone').style.display='block';
   document.getElementById('transitionPanel').style.display='none';
+  document.getElementById('filterPanel').style.display='none';
+  document.getElementById('photosMeta').style.display='none';
   document.getElementById('contextInput').value=''; document.getElementById('photoInput').value='';
-  document.querySelectorAll('.style-card,.transition-card,.duration-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('watermarkText').value=''; document.getElementById('watermarkSize').value=18; document.getElementById('watermarkSizeLabel').textContent='18px';
+  document.getElementById('captionOptionsWrap').innerHTML=''; document.getElementById('captionOptionsWrap').style.display='none';
+  document.querySelectorAll('.style-card,.transition-card,.duration-card,.filter-card,.wm-pos-card').forEach(c=>c.classList.remove('selected'));
   document.querySelector('.transition-card[data-transition="fade"]').classList.add('selected');
   document.querySelector('.duration-card[data-duration="15"]').classList.add('selected');
+  document.querySelector('.filter-card[data-filter="none"]').classList.add('selected');
+  document.querySelector('.wm-pos-card[data-pos="bottom-right"]').classList.add('selected');
+  updateGenerateButtonState();
   showStep(1); updateStepBar(1); window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -780,7 +1102,7 @@ function resetApp() {
 // ============================
 function showLoading(show) {
   document.getElementById('loading-screen').style.display = show ? 'flex' : 'none';
-  if (show) document.getElementById('loadingSub').textContent = state.groqKey ? 'Gerando legenda com IA...' : 'Usando legenda padrão...';
+  if (show) document.getElementById('loadingSub').textContent = 'Montando seu Reel...';
 }
 function setLoadingStep(n) {
   [1,2,3,4].forEach(i=>{const el=document.getElementById('ls'+i);el.classList.remove('active','done');if(i<n)el.classList.add('done');else if(i===n)el.classList.add('active');});
@@ -805,6 +1127,67 @@ document.getElementById('apiModal').addEventListener('click',function(e){if(e.ta
 function showToast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ============================
+// HISTÓRICO DE LEGENDAS
+// ============================
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('reelai_history') || '[]'); }
+  catch(e) { return []; }
+}
+function saveToHistory(item) {
+  const hist = getHistory();
+  hist.unshift(item);
+  if (hist.length > 10) hist.length = 10;
+  localStorage.setItem('reelai_history', JSON.stringify(hist));
+}
+function clearHistory() {
+  localStorage.removeItem('reelai_history');
+  renderHistory();
+  showToast('🗑️ Histórico limpo');
+}
+function relativeDate(iso) {
+  const d = new Date(iso);
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return 'agora mesmo';
+  if (diff < 3600) return `há ${Math.floor(diff/60)} min`;
+  if (diff < 86400) return `há ${Math.floor(diff/3600)}h`;
+  const days = Math.floor(diff / 86400);
+  if (days === 1) return 'há 1 dia';
+  if (days < 30) return `há ${days} dias`;
+  return d.toLocaleDateString('pt-BR');
+}
+function escapeHtml(s) {
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  const hist = getHistory();
+  if (!hist.length) { list.innerHTML = '<div class="history-empty">Nenhuma legenda no histórico ainda 📝</div>'; return; }
+  list.innerHTML = hist.map((h, i) => `
+    <div class="history-item">
+      <div class="history-item-caption">${escapeHtml(h.caption)}</div>
+      <div class="history-item-hashtags">${escapeHtml(h.hashtags)}</div>
+      <div class="history-item-footer">
+        <span class="history-item-date">${relativeDate(h.date)}</span>
+        <button class="history-item-copy" onclick="copyHistoryItem(${i})">📋 Copiar</button>
+      </div>
+    </div>`).join('');
+}
+function copyHistoryItem(i) {
+  const hist = getHistory(); const h = hist[i]; if (!h) return;
+  navigator.clipboard.writeText(`${h.caption}\n\n${h.hashtags}`).then(() => showToast('📋 Legenda copiada!'));
+}
+function openHistoryPanel() {
+  renderHistory();
+  document.getElementById('historyOverlay').classList.add('show');
+}
+function closeHistoryPanel() {
+  document.getElementById('historyOverlay').classList.remove('show');
+}
+function closeHistoryPanelOutside(e) {
+  if (e.target.id === 'historyOverlay') closeHistoryPanel();
 }
 
 // ============================
