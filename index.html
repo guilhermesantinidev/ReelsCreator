@@ -763,7 +763,7 @@ function buildVideo() {
         canvas.width = 540; canvas.height = 960;
         if (typeof MediaRecorder === 'undefined' || typeof canvas.captureStream !== 'function') throw new Error('VIDEO_UNSUPPORTED');
         const stream = canvas.captureStream(30);
-        const mimes = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4;codecs=h264','video/mp4'];
+        const mimes = ['video/mp4;codecs=h264','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
         const mime = mimes.find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m));
         if (!mime) throw new Error('VIDEO_UNSUPPORTED');
         let recorder;
@@ -1011,7 +1011,9 @@ function downloadVideo() {
   const blob = getBlob(); if (!blob) { showToast('⏳ Aguarde finalizar'); return; }
   const {ext} = getExt(blob); const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url; a.download=`reel-${Date.now()}.${ext}`; a.click();
-  URL.revokeObjectURL(url); showToast(state.staticOnly ? '✅ Imagem baixada!' : '✅ Vídeo baixado!');
+  URL.revokeObjectURL(url);
+  if (ext === 'webm') showToast('⬇️ Baixado em .webm — não aceito pelo Instagram. Use o celular pra gerar .mp4.');
+  else showToast(state.staticOnly ? '✅ Imagem baixada!' : '✅ Vídeo baixado!');
 }
 async function shareNative() {
   const blob = getBlob(); if (!blob) { showToast('⏳ Aguarde finalizar'); return; }
@@ -1059,14 +1061,23 @@ async function compartilharInstagram() {
   let copied = false;
   try { await navigator.clipboard.writeText(`${state.caption}\n\n${state.hashtags}`); copied=true; } catch(e){}
   const {ext,type} = getExt(blob);
+  const isIncompatible = ext === 'webm';
   const file = new File([blob], `reel.${ext}`, {type});
   if (navigator.canShare && navigator.canShare({files:[file]})) {
+    if (isIncompatible) {
+      showToast('⚠️ Este navegador só gera vídeo .webm, que o Instagram não aceita. Tente pelo celular (Safari/Chrome no iPhone ou Android) para gerar .mp4.');
+      return;
+    }
     showToast(copied?'📋 Legenda copiada! Cole no Instagram.':'⚠️ Use 📋 para copiar a legenda.');
     try { await navigator.share({files:[file],title:'Meu Reel ✨'}); } catch(e){} return;
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url; a.download=`reel.${ext}`; a.click();
   URL.revokeObjectURL(url);
+  if (isIncompatible) {
+    showToast('⬇️ Baixado em .webm — o Instagram NÃO aceita esse formato. Abra pelo celular para gerar .mp4, ou converta o arquivo antes de subir.');
+    return;
+  }
   showToast(copied?'⬇️ Baixado e legenda copiada! Suba no Instagram.':'⬇️ Mídia baixada! Use 📋 para a legenda.');
   setTimeout(()=>window.open('https://www.instagram.com/','_blank'),1200);
 }
